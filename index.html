@@ -5,13 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Marcador de Pádel</title>
     
-    <!-- Esto es suficiente para que Chrome ofrezca instalar -->
+    <!-- PWA Configuration -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Marcador Pádel">
     <meta name="theme-color" content="#1a472a">
+    <meta name="mobile-web-app-capable" content="yes">
     
     <style>
-        /* (todo el CSS de la versión anterior - mismo estilo) */
+        /* ===== ESTILOS COMPLETOS DEL MARCADOR ===== */
         * {
             box-sizing: border-box;
             user-select: none;
@@ -37,6 +44,17 @@
             padding: 20px;
             margin-bottom: 20px;
             border: 1px solid rgba(255,215,0,0.3);
+        }
+
+        .install-banner {
+            background: #d49b3a;
+            color: #1e3a2a;
+            border-radius: 40px;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.85rem;
         }
 
         .screen-wake {
@@ -408,17 +426,6 @@
             border-radius: 30px;
         }
 
-        .install-instruction {
-            background: #d49b3a;
-            color: #1e3a2a;
-            border-radius: 40px;
-            padding: 10px;
-            margin-bottom: 15px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 0.85rem;
-        }
-
         @media (max-width: 550px) {
             .team-points { font-size: 2.5rem; min-width: 100px; padding: 5px 15px; }
             button { width: 55px; font-size: 1.5rem; }
@@ -438,8 +445,8 @@
 <body>
 <div class="container">
     <div class="scoreboard">
-        <div class="install-instruction">
-            📱 Para instalar la app: ⋮ (tres puntos) → Instalar aplicación
+        <div class="install-banner">
+            🎾 MARCADOR DE PÁDEL PROFESIONAL 🎾
         </div>
 
         <div class="screen-wake" id="wakeLockStatus">🔋 Pantalla activa: ACTIVADA</div>
@@ -538,7 +545,7 @@
 </div>
 
 <script>
-    // ==================== WAKE LOCK (pantalla activa) ====================
+    // ==================== WAKE LOCK ====================
     let wakeLock = null;
     const wakeLockStatus = document.getElementById('wakeLockStatus');
     
@@ -548,7 +555,6 @@
                 wakeLock = await navigator.wakeLock.request('screen');
                 wakeLockStatus.innerHTML = '🔋 Pantalla activa: ACTIVADA ✅';
                 wakeLockStatus.style.background = '#2b7a3e';
-                
                 wakeLock.addEventListener('release', () => {
                     wakeLockStatus.innerHTML = '⚠️ Pantalla activa: LIBERADA';
                     wakeLockStatus.style.background = '#9e3c2c';
@@ -561,18 +567,14 @@
     }
     
     async function reactivarWakeLock() {
-        if (wakeLock === null) {
-            await activarWakeLock();
-        }
+        if (wakeLock === null) await activarWakeLock();
     }
     
     document.addEventListener('visibilitychange', async () => {
-        if (document.visibilityState === 'visible') {
-            await reactivarWakeLock();
-        }
+        if (document.visibilityState === 'visible') await reactivarWakeLock();
     });
     
-    // ==================== RECONOCIMIENTO DE VOZ CONTINUO ====================
+    // ==================== RECONOCIMIENTO DE VOZ ====================
     let recognition = null;
     let listening = false;
     let shouldRestart = true;
@@ -610,10 +612,8 @@
         newRecognition.onend = () => {
             if (shouldRestart && !ganadorPartido) {
                 setTimeout(() => {
-                    if (shouldRestart && !ganadorPartido) {
-                        try {
-                            recognition.start();
-                        } catch (e) {}
+                    if (shouldRestart && !ganadorPartido && recognition) {
+                        try { recognition.start(); } catch(e) {}
                     }
                 }, 100);
             } else {
@@ -628,34 +628,26 @@
         
         newRecognition.onresult = (event) => {
             const nombres = obtenerNombres();
-            
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const transcript = event.results[i][0].transcript.toLowerCase();
-                console.log('Comando:', transcript);
-                
                 if (transcript.includes('punto') && transcript.includes(nombres.a)) {
                     voiceFeedback.innerHTML = `✅ ¡Punto para ${nameAInput.value.trim()}!`;
                     voiceFeedback.style.background = '#2b7a3eaa';
-                    setTimeout(() => {
-                        if (listening) voiceFeedback.style.background = '#d49b3aaa';
-                    }, 800);
+                    setTimeout(() => { if (listening) voiceFeedback.style.background = '#d49b3aaa'; }, 800);
                     sumarPunto('A');
                 }
                 else if (transcript.includes('punto') && transcript.includes(nombres.b)) {
                     voiceFeedback.innerHTML = `✅ ¡Punto para ${nameBInput.value.trim()}!`;
                     voiceFeedback.style.background = '#2b7a3eaa';
-                    setTimeout(() => {
-                        if (listening) voiceFeedback.style.background = '#d49b3aaa';
-                    }, 800);
+                    setTimeout(() => { if (listening) voiceFeedback.style.background = '#d49b3aaa'; }, 800);
                     sumarPunto('B');
                 }
             }
         };
         
         newRecognition.onerror = (event) => {
-            console.error('Error de voz:', event.error);
             if (event.error === 'not-allowed') {
-                voiceFeedback.innerHTML = '🔴 Permiso denegado. Revisá la configuración del micrófono.';
+                voiceFeedback.innerHTML = '🔴 Permiso denegado. Revisá Configuración → Chrome → Permisos → Micrófono';
                 voiceFeedback.style.background = '#9e3c2caa';
                 shouldRestart = false;
                 listening = false;
@@ -672,35 +664,24 @@
             voiceFeedback.innerHTML = '⚠️ El partido ya terminó. Reinicia para seguir jugando.';
             return;
         }
-        
         if (listening) {
             shouldRestart = false;
-            if (recognition) {
-                recognition.stop();
-            }
+            if (recognition) recognition.stop();
             listening = false;
             micBtn.classList.remove('listening');
             voiceFeedback.innerHTML = '⚡ Manos libres DESACTIVADO. Pulsa el micrófono para activar.';
             voiceFeedback.style.background = '#000000aa';
             return;
         }
-        
         voiceFeedback.innerHTML = '🎤 Solicitando permiso de micrófono...';
-        
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
-            
-            if (!recognition) {
-                iniciarReconocimiento();
-            }
-            
+            if (!recognition) iniciarReconocimiento();
             shouldRestart = true;
             recognition.start();
             await activarWakeLock();
-            
         } catch (err) {
-            console.error('Error al pedir permiso:', err);
             voiceFeedback.innerHTML = '🔴 Permiso denegado. Activá el micrófono en Configuración → Chrome → Permisos';
             voiceFeedback.style.background = '#9e3c2caa';
         }
@@ -716,24 +697,17 @@
     
     // ==================== LÓGICA DEL MARCADOR ====================
     let modoTiebreak = false;
-    let puntosTiebreakA = 0;
-    let puntosTiebreakB = 0;
+    let puntosTiebreakA = 0, puntosTiebreakB = 0;
     
     function puntosATexto(puntos) {
         if (modoTiebreak) return puntos.toString();
         if (puntos === 0) return "0";
         if (puntos === 1) return "15";
         if (puntos === 2) return "30";
-        if (puntos === 3) return "40";
         return "40";
     }
     
-    let puntosA = 0;
-    let puntosB = 0;
-    let juegosA = 0;
-    let juegosB = 0;
-    let setsCompletados = [];
-    let ganadorPartido = null;
+    let puntosA = 0, puntosB = 0, juegosA = 0, juegosB = 0, setsCompletados = [], ganadorPartido = null;
     
     const pointsASpan = document.getElementById('pointsA');
     const pointsBSpan = document.getElementById('pointsB');
@@ -760,20 +734,14 @@
             pointsASpan.innerText = puntosATexto(puntosA);
             pointsBSpan.innerText = puntosATexto(puntosB);
         }
-        
         gamesASpan.innerText = juegosA;
         gamesBSpan.innerText = juegosB;
-        
         set1Span.innerText = setsCompletados[0] || "-";
         set2Span.innerText = setsCompletados[1] || "-";
         set3Span.innerText = setsCompletados[2] || "-";
-        
         document.querySelectorAll('.set-result').forEach((el, i) => {
-            if (setsCompletados[i]) {
-                el.classList.remove('empty');
-            } else {
-                el.classList.add('empty');
-            }
+            if (setsCompletados[i]) el.classList.remove('empty');
+            else el.classList.add('empty');
         });
     }
     
@@ -786,197 +754,94 @@
     
     function ganarTiebreak(equipo) {
         if (ganadorPartido) return;
-        
-        if (equipo === 'A') {
-            juegosA++;
-        } else {
-            juegosB++;
-        }
-        
-        const resultadoSet = `${juegosA}-${juegosB}`;
-        setsCompletados.push(resultadoSet);
-        
-        juegosA = 0;
-        juegosB = 0;
+        if (equipo === 'A') juegosA++;
+        else juegosB++;
+        setsCompletados.push(`${juegosA}-${juegosB}`);
+        juegosA = 0; juegosB = 0;
         modoTiebreak = false;
-        puntosTiebreakA = 0;
-        puntosTiebreakB = 0;
-        puntosA = 0;
-        puntosB = 0;
+        puntosTiebreakA = 0; puntosTiebreakB = 0;
+        puntosA = 0; puntosB = 0;
         actualizarTiebreakUI();
-        
-        const setsA = setsCompletados.filter(s => {
-            let [a, b] = s.split('-').map(Number);
-            return a > b;
-        }).length;
-        const setsB = setsCompletados.filter(s => {
-            let [a, b] = s.split('-').map(Number);
-            return b > a;
-        }).length;
-        
-        if (setsA >= 2) {
-            finalizarPartido('A');
-        } else if (setsB >= 2) {
-            finalizarPartido('B');
-        }
+        const setsA = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return a > b; }).length;
+        const setsB = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return b > a; }).length;
+        if (setsA >= 2) finalizarPartido('A');
+        else if (setsB >= 2) finalizarPartido('B');
     }
     
     function ganarJuego(equipo) {
         if (ganadorPartido) return;
-        
-        if (equipo === 'A') {
-            juegosA++;
-        } else {
-            juegosB++;
-        }
-        
-        puntosA = 0;
-        puntosB = 0;
+        if (equipo === 'A') juegosA++;
+        else juegosB++;
+        puntosA = 0; puntosB = 0;
         actualizarTiebreakUI();
-        
         comprobarSet();
     }
     
     function comprobarSet() {
         if (modoTiebreak) return;
-        
         let setGanado = null;
-        
         if (juegosA >= 6 && (juegosA - juegosB) >= 2) setGanado = 'A';
         else if (juegosB >= 6 && (juegosB - juegosA) >= 2) setGanado = 'B';
-        
-        if (juegosA === 7 && juegosB <= 5) setGanado = 'A';
+        else if (juegosA === 7 && juegosB <= 5) setGanado = 'A';
         else if (juegosB === 7 && juegosA <= 5) setGanado = 'B';
-        
-        if (juegosA === 6 && juegosB === 6) {
-            activarTiebreak();
-            return;
-        }
-        
+        if (juegosA === 6 && juegosB === 6) { activarTiebreak(); return; }
         if (setGanado) {
-            const resultadoSet = `${juegosA}-${juegosB}`;
-            setsCompletados.push(resultadoSet);
-            
-            juegosA = 0;
-            juegosB = 0;
+            setsCompletados.push(`${juegosA}-${juegosB}`);
+            juegosA = 0; juegosB = 0;
             actualizarTiebreakUI();
-            
-            const setsA = setsCompletados.filter(s => {
-                let [a, b] = s.split('-').map(Number);
-                return a > b;
-            }).length;
-            const setsB = setsCompletados.filter(s => {
-                let [a, b] = s.split('-').map(Number);
-                return b > a;
-            }).length;
-            
-            if (setsA >= 2) {
-                finalizarPartido('A');
-            } else if (setsB >= 2) {
-                finalizarPartido('B');
-            }
+            const setsA = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return a > b; }).length;
+            const setsB = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return b > a; }).length;
+            if (setsA >= 2) finalizarPartido('A');
+            else if (setsB >= 2) finalizarPartido('B');
         }
     }
     
     function sumarPunto(equipo) {
         if (ganadorPartido) return;
-        
         if (modoTiebreak) {
-            if (equipo === 'A') {
-                puntosTiebreakA++;
-            } else {
-                puntosTiebreakB++;
-            }
-            
+            if (equipo === 'A') puntosTiebreakA++;
+            else puntosTiebreakB++;
             actualizarTiebreakUI();
-            
-            const ganaTiebreakA = (puntosTiebreakA >= 7 && (puntosTiebreakA - puntosTiebreakB) >= 2);
-            const ganaTiebreakB = (puntosTiebreakB >= 7 && (puntosTiebreakB - puntosTiebreakA) >= 2);
-            
-            if (ganaTiebreakA) ganarTiebreak('A');
-            else if (ganaTiebreakB) ganarTiebreak('B');
-            
+            if (puntosTiebreakA >= 7 && (puntosTiebreakA - puntosTiebreakB) >= 2) ganarTiebreak('A');
+            else if (puntosTiebreakB >= 7 && (puntosTiebreakB - puntosTiebreakA) >= 2) ganarTiebreak('B');
             return;
         }
-        
-        if (puntosA === 3 && puntosB === 3) {
-            ganarJuego(equipo);
-            return;
-        }
-        
-        if (equipo === 'A' && puntosA === 3 && puntosB < 3) {
-            ganarJuego('A');
-            return;
-        }
-        if (equipo === 'B' && puntosB === 3 && puntosA < 3) {
-            ganarJuego('B');
-            return;
-        }
-        
-        if (equipo === 'A') {
-            if (puntosA < 3) puntosA++;
-        } else {
-            if (puntosB < 3) puntosB++;
-        }
-        
+        if (puntosA === 3 && puntosB === 3) { ganarJuego(equipo); return; }
+        if (equipo === 'A' && puntosA === 3 && puntosB < 3) { ganarJuego('A'); return; }
+        if (equipo === 'B' && puntosB === 3 && puntosA < 3) { ganarJuego('B'); return; }
+        if (equipo === 'A') { if (puntosA < 3) puntosA++; }
+        else { if (puntosB < 3) puntosB++; }
         actualizarTiebreakUI();
     }
     
     function restarPunto(equipo) {
         if (ganadorPartido) return;
-        
         if (modoTiebreak) {
             if (equipo === 'A' && puntosTiebreakA > 0) puntosTiebreakA--;
             else if (equipo === 'B' && puntosTiebreakB > 0) puntosTiebreakB--;
             actualizarTiebreakUI();
             return;
         }
-        
         if (puntosA === 3 && puntosB === 3) return;
-        
         if (equipo === 'A' && puntosA > 0) puntosA--;
         else if (equipo === 'B' && puntosB > 0) puntosB--;
-        
         actualizarTiebreakUI();
     }
     
     function finalizarPartido(ganadorCod) {
         if (ganadorPartido) return;
         ganadorPartido = ganadorCod;
-        
         shouldRestart = false;
-        if (recognition) {
-            recognition.stop();
-        }
-        
+        if (recognition) recognition.stop();
         const nombreA = nameAInput.value.trim() || "Pareja A";
         const nombreB = nameBInput.value.trim() || "Pareja B";
         const ganadorNombre = ganadorCod === 'A' ? nombreA : nombreB;
-        
-        const setsA = setsCompletados.filter(s => {
-            let [a, b] = s.split('-').map(Number);
-            return a > b;
-        }).length;
-        const setsB = setsCompletados.filter(s => {
-            let [a, b] = s.split('-').map(Number);
-            return b > a;
-        }).length;
-        
-        const partido = {
-            fecha: new Date().toLocaleString(),
-            equipoA: nombreA,
-            equipoB: nombreB,
-            setsAGanados: setsA,
-            setsBGanados: setsB,
-            setsDetalle: [...setsCompletados],
-            ganador: ganadorNombre
-        };
-        historialPartidos.unshift(partido);
+        const setsA = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return a > b; }).length;
+        const setsB = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return b > a; }).length;
+        historialPartidos.unshift({ fecha: new Date().toLocaleString(), equipoA: nombreA, equipoB: nombreB, setsAGanados: setsA, setsBGanados: setsB, setsDetalle: [...setsCompletados], ganador: ganadorNombre });
         guardarHistorial();
-        
         winnerMsgDiv.style.display = "block";
         winnerMsgDiv.innerText = `🏆 ¡${ganadorNombre} GANA EL PARTIDO! (${setsA} - ${setsB} en sets) 🏆`;
-        
         document.getElementById('addA').disabled = true;
         document.getElementById('addB').disabled = true;
         document.getElementById('subA').disabled = true;
@@ -984,65 +849,33 @@
     }
     
     function reiniciarPartido() {
-        puntosA = 0;
-        puntosB = 0;
-        juegosA = 0;
-        juegosB = 0;
-        setsCompletados = [];
-        ganadorPartido = null;
-        modoTiebreak = false;
-        puntosTiebreakA = 0;
-        puntosTiebreakB = 0;
+        puntosA = 0; puntosB = 0; juegosA = 0; juegosB = 0; setsCompletados = []; ganadorPartido = null;
+        modoTiebreak = false; puntosTiebreakA = 0; puntosTiebreakB = 0;
         actualizarTiebreakUI();
         winnerMsgDiv.style.display = "none";
-        
         document.getElementById('addA').disabled = false;
         document.getElementById('addB').disabled = false;
         document.getElementById('subA').disabled = false;
         document.getElementById('subB').disabled = false;
-        
         if (listening) {
             shouldRestart = false;
             if (recognition) recognition.stop();
             setTimeout(() => {
-                if (!ganadorPartido) {
-                    shouldRestart = true;
-                    recognition.start();
-                }
+                if (!ganadorPartido) { shouldRestart = true; recognition.start(); }
             }, 300);
         }
-        
         reactivarWakeLock();
     }
     
-    function guardarHistorial() {
-        localStorage.setItem('padel_historial_app', JSON.stringify(historialPartidos));
-        renderizarHistorial();
-    }
-    
-    function cargarHistorial() {
-        const guardado = localStorage.getItem('padel_historial_app');
-        historialPartidos = guardado ? JSON.parse(guardado) : [];
-        renderizarHistorial();
-    }
-    
+    function guardarHistorial() { localStorage.setItem('padel_historial_final', JSON.stringify(historialPartidos)); renderizarHistorial(); }
+    function cargarHistorial() { const guardado = localStorage.getItem('padel_historial_final'); historialPartidos = guardado ? JSON.parse(guardado) : []; renderizarHistorial(); }
     function renderizarHistorial() {
         const historyDiv = document.getElementById('historyList');
-        if (!historialPartidos.length) {
-            historyDiv.innerHTML = '<div style="text-align:center; color:#aaa;">📭 Sin partidos jugados aún</div>';
-            return;
-        }
+        if (!historialPartidos.length) { historyDiv.innerHTML = '<div style="text-align:center; color:#aaa;">📭 Sin partidos jugados aún</div>'; return; }
         let html = '';
         for (let p of historialPartidos) {
             let setsTexto = p.setsDetalle.map((s, i) => `S${i+1}: ${s}`).join('  ');
-            html += `
-                <div class="history-item">
-                    <strong>${p.fecha}</strong><br>
-                    🎾 ${p.equipoA} vs ${p.equipoB}<br>
-                    📊 Sets: ${p.setsAGanados} - ${p.setsBGanados} (${setsTexto})<br>
-                    🏆 <strong>Ganador: ${p.ganador}</strong>
-                </div>
-            `;
+            html += `<div class="history-item"><strong>${p.fecha}</strong><br>🎾 ${p.equipoA} vs ${p.equipoB}<br>📊 Sets: ${p.setsAGanados} - ${p.setsBGanados} (${setsTexto})<br>🏆 <strong>Ganador: ${p.ganador}</strong></div>`;
         }
         historyDiv.innerHTML = html;
     }
@@ -1052,17 +885,8 @@
     document.getElementById('subA').addEventListener('click', () => restarPunto('A'));
     document.getElementById('subB').addEventListener('click', () => restarPunto('B'));
     document.getElementById('resetMatchBtn').addEventListener('click', reiniciarPartido);
-    document.getElementById('finishMatchBtn').addEventListener('click', () => {
-        if (!ganadorPartido) {
-            alert("El partido aún no ha terminado. Espera a que alguien gane 2 sets.");
-        }
-    });
-    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
-        if (confirm("¿Borrar todo el historial de partidos?")) {
-            historialPartidos = [];
-            guardarHistorial();
-        }
-    });
+    document.getElementById('finishMatchBtn').addEventListener('click', () => { if (!ganadorPartido) alert("El partido aún no ha terminado. Espera a que alguien gane 2 sets."); });
+    document.getElementById('clearHistoryBtn').addEventListener('click', () => { if (confirm("¿Borrar todo el historial?")) { historialPartidos = []; guardarHistorial(); } });
     
     cargarHistorial();
     reiniciarPartido();
