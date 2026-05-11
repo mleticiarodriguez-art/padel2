@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Marcador de Pádel</title>
+    
+    <!-- Para que sea instalable como app -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Marcador Pádel">
+    <meta name="theme-color" content="#1a472a">
+    
+    <style>
+        /* (TODO EL CSS DE LAS VERSIONES ANTERIORES - MISMO ESTILO) */
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #1a472a 0%, #0e2a1a 100%);
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+        }
+
+        .scoreboard {
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            border-radius: 60px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+
+        .screen-wake {
+            background: #2a4a3a;
+            border-radius: 30px;
+            padding: 6px 12px;
+            font-size: 0.7rem;
+            text-align: center;
+            margin-bottom: 15px;
+            color: #FFD966;
+            display: inline-block;
+            width: auto;
+        }
+
+        .names-section {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .name-card {
+            flex: 1;
+            text-align: center;
+            background: #0f2120;
+            border-radius: 48px;
+            padding: 12px;
+        }
+
+        .name-card label {
+            display: block;
+            font-size: 0.8rem;
+            color: #b8d9b0;
+            margin-bottom: 6px;
+        }
+
+        .name-card input {
+            width: 90%;
+            padding: 10px;
+            font-size: 1.2rem;
+            text-align: center;
+            border: none;
+            border-radius: 40px;
+            background: #f9f2da;
+            font-weight: bold;
+            color: #1e3a2a;
+        }
+
+        .current-game {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .team {
+            flex: 1;
+            text-align: center;
+            background: #0f2120;
+            border-radius: 48px;
+            padding: 15px;
+        }
+
+        .team-points {
+            font-size: 4.5rem;
+            font-weight: 800;
+            background: #000000aa;
+            display: inline-block;
+            min-width: 140px;
+            padding: 10px 25px;
+            border-radius: 64px;
+            color: #f9f3d9;
+            margin: 8px 0;
+            font-family: monospace;
+            letter-spacing: 4px;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin-top: 12px;
+        }
+
+        button {
+            font-size: 2rem;
+            font-weight: bold;
+            border: none;
+            width: 70px;
+            padding: 12px 0;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: transform 0.05s linear;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(3px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .btn-add { background: #2b7a3e; color: white; }
+        .btn-sub { background: #9e3c2c; color: white; }
+
+        .voice-control {
+            background: linear-gradient(135deg, #2c3e4e, #1a2a3a);
+            border-radius: 50px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 1px solid #FFD96655;
+        }
+
+        .voice-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .mic-button {
+            background: #d49b3a;
+            color: #1e3a2a;
+            border: none;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            font-size: 2rem;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #8b5e2a;
+            transition: all 0.1s linear;
+        }
+
+        .mic-button:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #8b5e2a;
+        }
+
+        .mic-button.listening {
+            background: #ff4444;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .voice-commands {
+            color: #c8e6b5;
+            font-size: 0.85rem;
+        }
+
+        .voice-feedback {
+            background: #000000aa;
+            border-radius: 30px;
+            padding: 10px 15px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #FFE6B0;
+        }
+
+        .games-container {
+            background: #1e2a25c9;
+            border-radius: 40px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .games-title {
+            text-align: center;
+            color: #ffecb3;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .current-set-games {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: #00000066;
+            border-radius: 50px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .current-set-games span:first-child {
+            background: #2a4a3a;
+            padding: 8px 30px;
+            border-radius: 40px;
+            min-width: 90px;
+            text-align: center;
+            color: #FFE6B0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .current-set-games span:last-child {
+            background: #2a4a3a;
+            padding: 8px 30px;
+            border-radius: 40px;
+            min-width: 90px;
+            text-align: center;
+            color: #FFE6B0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .current-set-games span:nth-child(2) {
+            color: #FFD966;
+            font-size: 2.8rem;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        .games-label {
+            font-size: 0.8rem;
+            color: #c8e6b5;
+            margin-top: 5px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .tiebreak-indicator {
+            text-align: center;
+            background: #d49b3a;
+            color: #1e3a2a;
+            border-radius: 30px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-top: 10px;
+            display: inline-block;
+            width: auto;
+        }
+
+        .sets-won-section {
+            background: #00000055;
+            border-radius: 40px;
+            padding: 12px;
+            margin-top: 10px;
+        }
+
+        .sets-title {
+            text-align: center;
+            color: #FFD966;
+            font-weight: bold;
+            margin-bottom: 12px;
+            font-size: 1rem;
+        }
+
+        .sets-won {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .set-card {
+            background: #0f2120;
+            border-radius: 30px;
+            padding: 10px 20px;
+            min-width: 110px;
+            text-align: center;
+            border: 1px solid #FFD96655;
+        }
+
+        .set-number {
+            font-size: 0.8rem;
+            color: #b8d9b0;
+            margin-bottom: 5px;
+        }
+
+        .set-result {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #FFE6B0;
+            letter-spacing: 2px;
+        }
+
+        .set-result.empty {
+            color: #6b8a6b;
+        }
+
+        .global-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .action-btn {
+            font-size: 1rem;
+            width: auto;
+            padding: 10px 20px;
+            background: #2c3e4e;
+            color: white;
+        }
+
+        .install-banner {
+            background: #d49b3a;
+            color: #1e3a2a;
+            border-radius: 40px;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+            cursor: pointer;
+            display: none;
+        }
+
+        .history-section {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 40px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+
+        .history-title {
+            font-size: 1.4rem;
+            color: #FFE6B0;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #1e3a2aaa;
+            border-radius: 30px;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #e9f5db;
+        }
+
+        .clear-history {
+            background: #7a2c1f;
+            font-size: 0.8rem;
+            padding: 6px 14px;
+        }
+
+        .winner-msg {
+            text-align: center;
+            background: gold;
+            border-radius: 40px;
+            padding: 8px;
+            margin-top: 12px;
+            font-weight: bold;
+            color: #1e3a2a;
+        }
+
+        .gold-rule {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #FFD966;
+            margin-top: 8px;
+            background: #00000077;
+            padding: 6px;
+            border-radius: 30px;
+        }
+
+        @media (max-width: 550px) {
+            .team-points { font-size: 2.5rem; min-width: 100px; padding: 5px 15px; }
+            button { width: 55px; font-size: 1.5rem; }
+            .current-set-games { font-size: 1.5rem; gap: 15px; }
+            .current-set-games span:first-child, 
+            .current-set-games span:last-child { 
+                padding: 5px 15px; 
+                min-width: 60px;
+                font-size: 1.5rem;
+            }
+            .set-result { font-size: 1.2rem; }
+            .set-card { padding: 5px 12px; min-width: 80px; }
+            .mic-button { width: 55px; height: 55px; font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="scoreboard">
+        <div id="installBanner" class="install-banner">
+            📱 INSTALAR APP → Toca aquí para instalar en tu celular
+        </div>
+
+        <div class="screen-wake" id="wakeLockStatus">🔋 Pantalla activa: ACTIVADA</div>
+
+        <div class="names-section">
+            <div class="name-card">
+                <label>🏸 PAREJA A (decí "Punto + nombre")</label>
+                <input type="text" id="nameA" placeholder="Ej: Juan" value="Juan">
+            </div>
+            <div class="name-card">
+                <label>🏸 PAREJA B (decí "Punto + nombre")</label>
+                <input type="text" id="nameB" placeholder="Ej: Pedro" value="Pedro">
+            </div>
+        </div>
+
+        <div class="voice-control">
+            <div class="voice-status">
+                <button class="mic-button" id="micBtn">🎤</button>
+                <div class="voice-commands">
+                    🗣️ MODO MANOS LIBRES<br>
+                    Decí: <strong>"Punto Juan"</strong> o <strong>"Punto Pedro"</strong><br>
+                    (o el nombre que pusiste arriba)
+                </div>
+            </div>
+            <div id="voiceFeedback" class="voice-feedback">
+                ⚪ Pulsá el micrófono UNA VEZ para activar el modo manos libres
+            </div>
+        </div>
+
+        <div class="current-game">
+            <div class="team">
+                <div class="team-points" id="pointsA">0</div>
+                <div class="buttons">
+                    <button class="btn-sub" id="subA">-1</button>
+                    <button class="btn-add" id="addA">+1</button>
+                </div>
+            </div>
+            <div class="team">
+                <div class="team-points" id="pointsB">0</div>
+                <div class="buttons">
+                    <button class="btn-sub" id="subB">-1</button>
+                    <button class="btn-add" id="addB">+1</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="gold-rule">⚜️ PUNTO DE ORO: En 40-40 el siguiente punto GANA el juego ⚜️</div>
+
+        <div class="games-container">
+            <div class="games-title" id="setStatusTitle">🎾 JUEGOS EN ESTE SET</div>
+            <div class="current-set-games">
+                <span id="gamesA">0</span>
+                <span>-</span>
+                <span id="gamesB">0</span>
+            </div>
+            <div class="games-label">
+                <span>🏸 Juegos Pareja A</span>
+                <span>🏸 Juegos Pareja B</span>
+            </div>
+            <div id="tiebreakIndicator" style="text-align: center; margin-top: 8px;"></div>
+        </div>
+
+        <div class="sets-won-section">
+            <div class="sets-title">🏆 SETS GANADOS</div>
+            <div class="sets-won" id="setsHistory">
+                <div class="set-card">
+                    <div class="set-number">SET 1</div>
+                    <div class="set-result" id="set1">-</div>
+                </div>
+                <div class="set-card">
+                    <div class="set-number">SET 2</div>
+                    <div class="set-result" id="set2">-</div>
+                </div>
+                <div class="set-card">
+                    <div class="set-number">SET 3</div>
+                    <div class="set-result" id="set3">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="global-buttons">
+            <button class="action-btn" id="resetMatchBtn">🔄 REINICIAR PARTIDO</button>
+            <button class="action-btn" id="finishMatchBtn">🎯 FINALIZAR PARTIDO</button>
+        </div>
+        <div id="winnerMsg" class="winner-msg" style="display: none;"></div>
+    </div>
+
+    <div class="history-section">
+        <div class="history-title">
+            📋 HISTORIAL DE PARTIDOS
+            <button class="clear-history" id="clearHistoryBtn">🗑️ BORRAR TODO</button>
+        </div>
+        <div id="historyList" class="history-list">
+            <div style="text-align:center; color:#aaa;">📭 Sin partidos jugados aún</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==================== INSTALACIÓN PWA ====================
+    let deferredPrompt;
+    const installBanner = document.getElementById('installBanner');
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBanner.style.display = 'block';
+        
+        installBanner.addEventListener('click', () => {
+            installBanner.style.display = 'none';
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('App instalada');
+                }
+                deferredPrompt = null;
+            });
+        });
+    });
+    
+    // ==================== WAKE LOCK (pantalla activa) ====================
+    let wakeLock = null;
+    const wakeLockStatus = document.getElementById('wakeLockStatus');
+    
+    async function activarWakeLock() {
+        if ('wakeLock' in navigator) {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                wakeLockStatus.innerHTML = '🔋 Pantalla activa: ACTIVADA ✅';
+                wakeLockStatus.style.background = '#2b7a3e';
+                
+                wakeLock.addEventListener('release', () => {
+                    wakeLockStatus.innerHTML = '⚠️ Pantalla activa: LIBERADA';
+                    wakeLockStatus.style.background = '#9e3c2c';
+                });
+            } catch (err) {
+                wakeLockStatus.innerHTML = '❌ Pantalla activa: NO SOPORTADA';
+                wakeLockStatus.style.background = '#9e3c2c';
+            }
+        }
+    }
+    
+    async function reactivarWakeLock() {
+        if (wakeLock === null) {
+            await activarWakeLock();
+        }
+    }
+    
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible') {
+            await reactivarWakeLock();
+        }
+    });
+    
+    // ==================== RECONOCIMIENTO DE VOZ CONTINUO ====================
+    let recognition = null;
+    let listening = false;
+    let shouldRestart = true;
+    const micBtn = document.getElementById('micBtn');
+    const voiceFeedback = document.getElementById('voiceFeedback');
+    const nameAInput = document.getElementById('nameA');
+    const nameBInput = document.getElementById('nameB');
+    
+    function obtenerNombres() {
+        return {
+            a: nameAInput.value.trim().toLowerCase() || "juan",
+            b: nameBInput.value.trim().toLowerCase() || "pedro"
+        };
+    }
+    
+    function iniciarReconocimiento() {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            voiceFeedback.innerHTML = '❌ Tu navegador no soporta reconocimiento de voz.';
+            return false;
+        }
+        
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const newRecognition = new SpeechRecognition();
+        newRecognition.continuous = true;
+        newRecognition.interimResults = false;
+        newRecognition.lang = 'es-ES';
+        
+        newRecognition.onstart = () => {
+            listening = true;
+            micBtn.classList.add('listening');
+            voiceFeedback.innerHTML = '🎤 Modo manos libres ACTIVADO. Decí "Punto + nombre"';
+            voiceFeedback.style.background = '#d49b3aaa';
+        };
+        
+        newRecognition.onend = () => {
+            if (shouldRestart && !ganadorPartido) {
+                setTimeout(() => {
+                    if (shouldRestart && !ganadorPartido) {
+                        try {
+                            recognition.start();
+                        } catch (e) {}
+                    }
+                }, 100);
+            } else {
+                listening = false;
+                micBtn.classList.remove('listening');
+                if (!ganadorPartido) {
+                    voiceFeedback.innerHTML = '⚡ Voz desactivada. Pulsa el micrófono para activar.';
+                    voiceFeedback.style.background = '#000000aa';
+                }
+            }
+        };
+        
+        newRecognition.onresult = (event) => {
+            const nombres = obtenerNombres();
+            
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript.toLowerCase();
+                console.log('Comando:', transcript);
+                
+                if (transcript.includes('punto') && transcript.includes(nombres.a)) {
+                    voiceFeedback.innerHTML = `✅ ¡Punto para ${nameAInput.value.trim()}!`;
+                    voiceFeedback.style.background = '#2b7a3eaa';
+                    setTimeout(() => {
+                        if (listening) voiceFeedback.style.background = '#d49b3aaa';
+                    }, 800);
+                    sumarPunto('A');
+                }
+                else if (transcript.includes('punto') && transcript.includes(nombres.b)) {
+                    voiceFeedback.innerHTML = `✅ ¡Punto para ${nameBInput.value.trim()}!`;
+                    voiceFeedback.style.background = '#2b7a3eaa';
+                    setTimeout(() => {
+                        if (listening) voiceFeedback.style.background = '#d49b3aaa';
+                    }, 800);
+                    sumarPunto('B');
+                }
+            }
+        };
+        
+        newRecognition.onerror = (event) => {
+            console.error('Error de voz:', event.error);
+            if (event.error === 'not-allowed') {
+                voiceFeedback.innerHTML = '🔴 Permiso denegado. Revisá la configuración del micrófono.';
+                voiceFeedback.style.background = '#9e3c2caa';
+                shouldRestart = false;
+                listening = false;
+                micBtn.classList.remove('listening');
+            }
+        };
+        
+        recognition = newRecognition;
+        return true;
+    }
+    
+    async function pedirPermisoYActivar() {
+        if (ganadorPartido) {
+            voiceFeedback.innerHTML = '⚠️ El partido ya terminó. Reinicia para seguir jugando.';
+            return;
+        }
+        
+        if (listening) {
+            shouldRestart = false;
+            if (recognition) {
+                recognition.stop();
+            }
+            listening = false;
+            micBtn.classList.remove('listening');
+            voiceFeedback.innerHTML = '⚡ Manos libres DESACTIVADO. Pulsa el micrófono para activar.';
+            voiceFeedback.style.background = '#000000aa';
+            return;
+        }
+        
+        voiceFeedback.innerHTML = '🎤 Solicitando permiso de micrófono...';
+        
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+            
+            if (!recognition) {
+                iniciarReconocimiento();
+            }
+            
+            shouldRestart = true;
+            recognition.start();
+            await activarWakeLock();
+            
+        } catch (err) {
+            console.error('Error al pedir permiso:', err);
+            voiceFeedback.innerHTML = '🔴 Permiso denegado. Activá el micrófono en Configuración → Chrome → Permisos';
+            voiceFeedback.style.background = '#9e3c2caa';
+        }
+    }
+    
+    micBtn.addEventListener('click', pedirPermisoYActivar);
+    
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        voiceFeedback.innerHTML = '❌ Tu navegador no soporta reconocimiento de voz. Usá los botones táctiles.';
+        micBtn.disabled = true;
+        micBtn.style.opacity = '0.5';
+    }
+    
+    // ==================== LÓGICA DEL MARCADOR ====================
+    let modoTiebreak = false;
+    let puntosTiebreakA = 0;
+    let puntosTiebreakB = 0;
+    
+    function puntosATexto(puntos) {
+        if (modoTiebreak) return puntos.toString();
+        if (puntos === 0) return "0";
+        if (puntos === 1) return "15";
+        if (puntos === 2) return "30";
+        if (puntos === 3) return "40";
+        return "40";
+    }
+    
+    let puntosA = 0;
+    let puntosB = 0;
+    let juegosA = 0;
+    let juegosB = 0;
+    let setsCompletados = [];
+    let ganadorPartido = null;
+    
+    const pointsASpan = document.getElementById('pointsA');
+    const pointsBSpan = document.getElementById('pointsB');
+    const gamesASpan = document.getElementById('gamesA');
+    const gamesBSpan = document.getElementById('gamesB');
+    const set1Span = document.getElementById('set1');
+    const set2Span = document.getElementById('set2');
+    const set3Span = document.getElementById('set3');
+    const winnerMsgDiv = document.getElementById('winnerMsg');
+    const setStatusTitle = document.getElementById('setStatusTitle');
+    const tiebreakIndicator = document.getElementById('tiebreakIndicator');
+    
+    let historialPartidos = [];
+    
+    function actualizarTiebreakUI() {
+        if (modoTiebreak) {
+            setStatusTitle.innerHTML = "🎾 TIE-BREAK (7 puntos, diferencia 2)";
+            tiebreakIndicator.innerHTML = '<span class="tiebreak-indicator">⚡ MODO TIE-BREAK ⚡</span>';
+            pointsASpan.innerText = puntosTiebreakA;
+            pointsBSpan.innerText = puntosTiebreakB;
+        } else {
+            setStatusTitle.innerHTML = "🎾 JUEGOS EN ESTE SET";
+            tiebreakIndicator.innerHTML = '';
+            pointsASpan.innerText = puntosATexto(puntosA);
+            pointsBSpan.innerText = puntosATexto(puntosB);
+        }
+        
+        gamesASpan.innerText = juegosA;
+        gamesBSpan.innerText = juegosB;
+        
+        set1Span.innerText = setsCompletados[0] || "-";
+        set2Span.innerText = setsCompletados[1] || "-";
+        set3Span.innerText = setsCompletados[2] || "-";
+        
+        document.querySelectorAll('.set-result').forEach((el, i) => {
+            if (setsCompletados[i]) {
+                el.classList.remove('empty');
+            } else {
+                el.classList.add('empty');
+            }
+        });
+    }
+    
+    function activarTiebreak() {
+        modoTiebreak = true;
+        puntosTiebreakA = 0;
+        puntosTiebreakB = 0;
+        actualizarTiebreakUI();
+    }
+    
+    function ganarTiebreak(equipo) {
+        if (ganadorPartido) return;
+        
+        if (equipo === 'A') {
+            juegosA++;
+        } else {
+            juegosB++;
+        }
+        
+        const resultadoSet = `${juegosA}-${juegosB}`;
+        setsCompletados.push(resultadoSet);
+        
+        juegosA = 0;
+        juegosB = 0;
+        modoTiebreak = false;
+        puntosTiebreakA = 0;
+        puntosTiebreakB = 0;
+        puntosA = 0;
+        puntosB = 0;
+        actualizarTiebreakUI();
+        
+        const setsA = setsCompletados.filter(s => {
+            let [a, b] = s.split('-').map(Number);
+            return a > b;
+        }).length;
+        const setsB = setsCompletados.filter(s => {
+            let [a, b] = s.split('-').map(Number);
+            return b > a;
+        }).length;
+        
+        if (setsA >= 2) {
+            finalizarPartido('A');
+        } else if (setsB >= 2) {
+            finalizarPartido('B');
+        }
+    }
+    
+    function ganarJuego(equipo) {
+        if (ganadorPartido) return;
+        
+        if (equipo === 'A') {
+            juegosA++;
+        } else {
+            juegosB++;
+        }
+        
+        puntosA = 0;
+        puntosB = 0;
+        actualizarTiebreakUI();
+        
+        comprobarSet();
+    }
+    
+    function comprobarSet() {
+        if (modoTiebreak) return;
+        
+        let setGanado = null;
+        
+        if (juegosA >= 6 && (juegosA - juegosB) >= 2) setGanado = 'A';
+        else if (juegosB >= 6 && (juegosB - juegosA) >= 2) setGanado = 'B';
+        
+        if (juegosA === 7 && juegosB <= 5) setGanado = 'A';
+        else if (juegosB === 7 && juegosA <= 5) setGanado = 'B';
+        
+        if (juegosA === 6 && juegosB === 6) {
+            activarTiebreak();
+            return;
+        }
+        
+        if (setGanado) {
+            const resultadoSet = `${juegosA}-${juegosB}`;
+            setsCompletados.push(resultadoSet);
+            
+            juegosA = 0;
+            juegosB = 0;
+            actualizarTiebreakUI();
+            
+            const setsA = setsCompletados.filter(s => {
+                let [a, b] = s.split('-').map(Number);
+                return a > b;
+            }).length;
+            const setsB = setsCompletados.filter(s => {
+                let [a, b] = s.split('-').map(Number);
+                return b > a;
+            }).length;
+            
+            if (setsA >= 2) {
+                finalizarPartido('A');
+            } else if (setsB >= 2) {
+                finalizarPartido('B');
+            }
+        }
+    }
+    
+    function sumarPunto(equipo) {
+        if (ganadorPartido) return;
+        
+        if (modoTiebreak) {
+            if (equipo === 'A') {
+                puntosTiebreakA++;
+            } else {
+                puntosTiebreakB++;
+            }
+            
+            actualizarTiebreakUI();
+            
+            const ganaTiebreakA = (puntosTiebreakA >= 7 && (puntosTiebreakA - puntosTiebreakB) >= 2);
+            const ganaTiebreakB = (puntosTiebreakB >= 7 && (puntosTiebreakB - puntosTiebreakA) >= 2);
+            
+            if (ganaTiebreakA) ganarTiebreak('A');
+            else if (ganaTiebreakB) ganarTiebreak('B');
+            
+            return;
+        }
+        
+        if (puntosA === 3 && puntosB === 3) {
+            ganarJuego(equipo);
+            return;
+        }
+        
+        if (equipo === 'A' && puntosA === 3 && puntosB < 3) {
+            ganarJuego('A');
+            return;
+        }
+        if (equipo === 'B' && puntosB === 3 && puntosA < 3) {
+            ganarJuego('B');
+            return;
+        }
+        
+        if (equipo === 'A') {
+            if (puntosA < 3) puntosA++;
+        } else {
+            if (puntosB < 3) puntosB++;
+        }
+        
+        actualizarTiebreakUI();
+    }
+    
+    function restarPunto(equipo) {
+        if (ganadorPartido) return;
+        
+        if (modoTiebreak) {
+            if (equipo === 'A' && puntosTiebreakA > 0) puntosTiebreakA--;
+            else if (equipo === 'B' && puntosTiebreakB > 0) puntosTiebreakB--;
+            actualizarTiebreakUI();
+            return;
+        }
+        
+        if (puntosA === 3 && puntosB === 3) return;
+        
+        if (equipo === 'A' && puntosA > 0) puntosA--;
+        else if (equipo === 'B' && puntosB > 0) puntosB--;
+        
+        actualizarTiebreakUI();
+    }
+    
+    function finalizarPartido(ganadorCod) {
+        if (ganadorPartido) return;
+        ganadorPartido = ganadorCod;
+        
+        shouldRestart = false;
+        if (recognition) {
+            recognition.stop();
+        }
+        
+        const nombreA = nameAInput.value.trim() || "Pareja A";
+        const nombreB = nameBInput.value.trim() || "Pareja B";
+        const ganadorNombre = ganadorCod === 'A' ? nombreA : nombreB;
+        
+        const setsA = setsCompletados.filter(s => {
+            let [a, b] = s.split('-').map(Number);
+            return a > b;
+        }).length;
+        const setsB = setsCompletados.filter(s => {
+            let [a, b] = s.split('-').map(Number);
+            return b > a;
+        }).length;
+        
+        const partido = {
+            fecha: new Date().toLocaleString(),
+            equipoA: nombreA,
+            equipoB: nombreB,
+            setsAGanados: setsA,
+            setsBGanados: setsB,
+            setsDetalle: [...setsCompletados],
+            ganador: ganadorNombre
+        };
+        historialPartidos.unshift(partido);
+        guardarHistorial();
+        
+        winnerMsgDiv.style.display = "block";
+        winnerMsgDiv.innerText = `🏆 ¡${ganadorNombre} GANA EL PARTIDO! (${setsA} - ${setsB} en sets) 🏆`;
+        
+        document.getElementById('addA').disabled = true;
+        document.getElementById('addB').disabled = true;
+        document.getElementById('subA').disabled = true;
+        document.getElementById('subB').disabled = true;
+    }
+    
+    function reiniciarPartido() {
+        puntosA = 0;
+        puntosB = 0;
+        juegosA = 0;
+        juegosB = 0;
+        setsCompletados = [];
+        ganadorPartido = null;
+        modoTiebreak = false;
+        puntosTiebreakA = 0;
+        puntosTiebreakB = 0;
+        actualizarTiebreakUI();
+        winnerMsgDiv.style.display = "none";
+        
+        document.getElementById('addA').disabled = false;
+        document.getElementById('addB').disabled = false;
+        document.getElementById('subA').disabled = false;
+        document.getElementById('subB').disabled = false;
+        
+        if (listening) {
+            shouldRestart = false;
+            if (recognition) recognition.stop();
+            setTimeout(() => {
+                if (!ganadorPartido) {
+                    shouldRestart = true;
+                    recognition.start();
+                }
+            }, 300);
+        }
+        
+        reactivarWakeLock();
+    }
+    
+    function guardarHistorial() {
+        localStorage.setItem('padel_historial_app', JSON.stringify(historialPartidos));
+        renderizarHistorial();
+    }
+    
+    function cargarHistorial() {
+        const guardado = localStorage.getItem('padel_historial_app');
+        historialPartidos = guardado ? JSON.parse(guardado) : [];
+        renderizarHistorial();
+    }
+    
+    function renderizarHistorial() {
+        const historyDiv = document.getElementById('historyList');
+        if (!historialPartidos.length) {
+            historyDiv.innerHTML = '<div style="text-align:center; color:#aaa;">📭 Sin partidos jugados aún</div>';
+            return;
+        }
+        let html = '';
+        for (let p of historialPartidos) {
+            let setsTexto = p.setsDetalle.map((s, i) => `S${i+1}: ${s}`).join('  ');
+            html += `
+                <div class="history-item">
+                    <strong>${p.fecha}</strong><br>
+                    🎾 ${p.equipoA} vs ${p.equipoB}<br>
+                    📊 Sets: ${p.setsAGanados} - ${p.setsBGanados} (${setsTexto})<br>
+                    🏆 <strong>Ganador: ${p.ganador}</strong>
+                </div>
+            `;
+        }
+        historyDiv.innerHTML = html;
+    }
+    
+    document.getElementById('addA').addEventListener('click', () => sumarPunto('A'));
+    document.getElementById('addB').addEventListener('click', () => sumarPunto('B'));
+    document.getElementById('subA').addEventListener('click', () => restarPunto('A'));
+    document.getElementById('subB').addEventListener('click', () => restarPunto('B'));
+    document.getElementById('resetMatchBtn').addEventListener('click', reiniciarPartido);
+    document.getElementById('finishMatchBtn').addEventListener('click', () => {
+        if (!ganadorPartido) {
+            alert("El partido aún no ha terminado. Espera a que alguien gane 2 sets.");
+        }
+    });
+    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+        if (confirm("¿Borrar todo el historial de partidos?")) {
+            historialPartidos = [];
+            guardarHistorial();
+        }
+    });
+    
+    cargarHistorial();
+    reiniciarPartido();
+    activarWakeLock();
+</script>
+</body>
+</html>
