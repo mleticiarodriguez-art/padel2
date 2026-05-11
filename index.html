@@ -3,21 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Marcador de Pádel - Voz con Filtro Anti-Ruido</title>
+    <title>Marcador de Pádel - Modo Corrección</title>
     
-    <!-- PWA Configuration -->
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-    
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Marcador Pádel">
     <meta name="theme-color" content="#1a472a">
-    <meta name="mobile-web-app-capable" content="yes">
     
     <style>
+        /* Estilos base (mismos que antes, compactados) */
         * {
             box-sizing: border-box;
             user-select: none;
@@ -45,27 +40,14 @@
             border: 1px solid rgba(255,215,0,0.3);
         }
 
-        .install-banner {
-            background: #d49b3a;
-            color: #1e3a2a;
-            border-radius: 40px;
-            padding: 10px;
-            margin-bottom: 15px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 0.85rem;
-        }
-
         .screen-wake {
             background: #2a4a3a;
             border-radius: 30px;
             padding: 6px 12px;
             font-size: 0.7rem;
-            text-align: center;
             margin-bottom: 15px;
             color: #FFD966;
             display: inline-block;
-            width: auto;
         }
 
         .names-section {
@@ -128,7 +110,6 @@
             color: #f9f3d9;
             margin: 8px 0;
             font-family: monospace;
-            letter-spacing: 4px;
         }
 
         .buttons {
@@ -146,8 +127,8 @@
             padding: 12px 0;
             border-radius: 60px;
             cursor: pointer;
-            transition: transform 0.05s linear;
             box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+            transition: transform 0.05s;
         }
 
         button:active {
@@ -156,7 +137,6 @@
 
         button:disabled {
             opacity: 0.5;
-            transform: none;
             cursor: not-allowed;
         }
 
@@ -190,12 +170,6 @@
             font-size: 2rem;
             cursor: pointer;
             box-shadow: 0 5px 0 #8b5e2a;
-            transition: all 0.1s linear;
-        }
-
-        .mic-button:active {
-            transform: translateY(3px);
-            box-shadow: 0 2px 0 #8b5e2a;
         }
 
         .mic-button.listening {
@@ -210,33 +184,37 @@
             100% { transform: scale(1); }
         }
 
-        .voice-commands {
-            color: #c8e6b5;
-            font-size: 0.85rem;
-        }
-
         .voice-feedback {
             background: #000000aa;
             border-radius: 30px;
-            padding: 10px 15px;
+            padding: 10px;
             margin-top: 10px;
             font-size: 0.9rem;
             color: #FFE6B0;
         }
 
-        .confidence-bar {
-            height: 4px;
-            background: #2a4a3a;
-            border-radius: 2px;
+        .debug-log {
+            background: #0a1a15aa;
+            border-radius: 20px;
+            padding: 8px;
             margin-top: 8px;
-            overflow: hidden;
+            font-size: 0.7rem;
+            color: #88aa88;
+            font-family: monospace;
+            text-align: left;
+            max-height: 100px;
+            overflow-y: auto;
         }
 
-        .confidence-fill {
-            height: 100%;
-            width: 0%;
-            background: #FFD966;
-            transition: width 0.3s;
+        .test-mode {
+            background: #d49b3a;
+            color: #1e3a2a;
+            border-radius: 20px;
+            padding: 5px 10px;
+            font-size: 0.7rem;
+            margin-top: 8px;
+            cursor: pointer;
+            display: inline-block;
         }
 
         .games-container {
@@ -246,77 +224,31 @@
             margin-bottom: 16px;
         }
 
-        .games-title {
-            text-align: center;
-            color: #ffecb3;
-            font-weight: bold;
-            margin-bottom: 10px;
-            font-size: 1rem;
-        }
-
         .current-set-games {
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 30px;
             font-size: 2.5rem;
-            font-weight: bold;
             background: #00000066;
             border-radius: 50px;
             padding: 15px;
             margin-bottom: 15px;
         }
 
-        .current-set-games span:first-child {
-            background: #2a4a3a;
-            padding: 8px 30px;
-            border-radius: 40px;
-            min-width: 90px;
-            text-align: center;
-            color: #FFE6B0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            font-weight: bold;
-            letter-spacing: 2px;
-        }
-
+        .current-set-games span:first-child,
         .current-set-games span:last-child {
             background: #2a4a3a;
             padding: 8px 30px;
             border-radius: 40px;
+            color: #FFE6B0;
             min-width: 90px;
             text-align: center;
-            color: #FFE6B0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            font-weight: bold;
-            letter-spacing: 2px;
         }
 
         .current-set-games span:nth-child(2) {
             color: #FFD966;
             font-size: 2.8rem;
-            text-shadow: 0 0 5px rgba(0,0,0,0.5);
-        }
-
-        .games-label {
-            font-size: 0.8rem;
-            color: #c8e6b5;
-            margin-top: 5px;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 20px;
-        }
-
-        .tiebreak-indicator {
-            text-align: center;
-            background: #d49b3a;
-            color: #1e3a2a;
-            border-radius: 30px;
-            padding: 4px 12px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            margin-top: 10px;
-            display: inline-block;
-            width: auto;
         }
 
         .sets-won-section {
@@ -324,14 +256,6 @@
             border-radius: 40px;
             padding: 12px;
             margin-top: 10px;
-        }
-
-        .sets-title {
-            text-align: center;
-            color: #FFD966;
-            font-weight: bold;
-            margin-bottom: 12px;
-            font-size: 1rem;
         }
 
         .sets-won {
@@ -345,26 +269,14 @@
             background: #0f2120;
             border-radius: 30px;
             padding: 10px 20px;
-            min-width: 110px;
             text-align: center;
             border: 1px solid #FFD96655;
-        }
-
-        .set-number {
-            font-size: 0.8rem;
-            color: #b8d9b0;
-            margin-bottom: 5px;
         }
 
         .set-result {
             font-size: 1.6rem;
             font-weight: bold;
             color: #FFE6B0;
-            letter-spacing: 2px;
-        }
-
-        .set-result.empty {
-            color: #6b8a6b;
         }
 
         .global-buttons {
@@ -396,7 +308,6 @@
             margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
             flex-wrap: wrap;
         }
 
@@ -408,7 +319,7 @@
         .history-item {
             background: #1e3a2aaa;
             border-radius: 30px;
-            padding: 10px 15px;
+            padding: 10px;
             margin-bottom: 8px;
             font-size: 0.85rem;
             color: #e9f5db;
@@ -440,32 +351,11 @@
             border-radius: 30px;
         }
 
-        /* Barra de sensibilidad */
-        .sensitivity-control {
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            font-size: 0.75rem;
-        }
-        
-        .sensitivity-control input {
-            width: 100px;
-        }
-
         @media (max-width: 550px) {
             .team-points { font-size: 2.5rem; min-width: 100px; padding: 5px 15px; }
             button { width: 55px; font-size: 1.5rem; }
-            .current-set-games { font-size: 1.5rem; gap: 15px; }
-            .current-set-games span:first-child, 
-            .current-set-games span:last-child { 
-                padding: 5px 15px; 
-                min-width: 60px;
-                font-size: 1.5rem;
-            }
-            .set-result { font-size: 1.2rem; }
-            .set-card { padding: 5px 12px; min-width: 80px; }
+            .current-set-games span:first-child,
+            .current-set-games span:last-child { padding: 5px 15px; min-width: 60px; font-size: 1.5rem; }
             .mic-button { width: 55px; height: 55px; font-size: 1.5rem; }
         }
     </style>
@@ -473,19 +363,15 @@
 <body>
 <div class="container">
     <div class="scoreboard">
-        <div class="install-banner">
-            🎾 MARCADOR DE PÁDEL - MODO ANTIRRUIDO 🎾
-        </div>
-
         <div class="screen-wake" id="wakeLockStatus">🔋 Pantalla activa: ACTIVADA</div>
 
         <div class="names-section">
             <div class="name-card">
-                <label>🏸 PAREJA A (decí "Punto + nombre")</label>
+                <label>🏸 PAREJA A (Comandos: "A", "Uno", "Juan")</label>
                 <input type="text" id="nameA" placeholder="Ej: Juan" value="Juan">
             </div>
             <div class="name-card">
-                <label>🏸 PAREJA B (decí "Punto + nombre")</label>
+                <label>🏸 PAREJA B (Comandos: "B", "Dos", "Pedro")</label>
                 <input type="text" id="nameB" placeholder="Ej: Pedro" value="Pedro">
             </div>
         </div>
@@ -493,23 +379,15 @@
         <div class="voice-control">
             <div class="voice-status">
                 <button class="mic-button" id="micBtn">🎤</button>
-                <div class="voice-commands">
-                    🗣️ MODO ANTIRRUIDO<br>
-                    Decí: <strong>"Punto Juan"</strong> o <strong>"Punto Pedro"</strong><br>
-                    <span style="font-size:0.7rem;">(también: "Gana Juan", "Suma Pedro", "Punto para A", etc.)</span>
+                <div class="voice-feedback" id="voiceFeedback">
+                    ⚪ Pulsá el micrófono para activar
                 </div>
             </div>
-            <div id="voiceFeedback" class="voice-feedback">
-                ⚪ Pulsá el micrófono UNA VEZ para activar el modo manos libres
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 8px;">
+                <span class="test-mode" id="testModeBtn">🔧 Modo Prueba (activar)</span>
             </div>
-            <div class="confidence-bar">
-                <div class="confidence-fill" id="confidenceFill"></div>
-            </div>
-            <div class="sensitivity-control">
-                <span>🔊 Sensibilidad:</span>
-                <input type="range" id="sensitivity" min="0.3" max="1" step="0.05" value="0.6">
-                <span id="sensitivityValue">60%</span>
-                <span style="font-size:0.65rem;">(menos = más filtro)</span>
+            <div class="debug-log" id="debugLog">
+                📝 Log de comandos aparecerá aquí...
             </div>
         </div>
 
@@ -539,42 +417,29 @@
                 <span>-</span>
                 <span id="gamesB">0</span>
             </div>
-            <div class="games-label">
-                <span>🏸 Juegos Pareja A</span>
-                <span>🏸 Juegos Pareja B</span>
-            </div>
-            <div id="tiebreakIndicator" style="text-align: center; margin-top: 8px;"></div>
+            <div id="tiebreakIndicator" style="text-align: center;"></div>
         </div>
 
         <div class="sets-won-section">
             <div class="sets-title">🏆 SETS GANADOS</div>
             <div class="sets-won" id="setsHistory">
-                <div class="set-card">
-                    <div class="set-number">SET 1</div>
-                    <div class="set-result" id="set1">-</div>
-                </div>
-                <div class="set-card">
-                    <div class="set-number">SET 2</div>
-                    <div class="set-result" id="set2">-</div>
-                </div>
-                <div class="set-card">
-                    <div class="set-number">SET 3</div>
-                    <div class="set-result" id="set3">-</div>
-                </div>
+                <div class="set-card">SET 1: <span id="set1">-</span></div>
+                <div class="set-card">SET 2: <span id="set2">-</span></div>
+                <div class="set-card">SET 3: <span id="set3">-</span></div>
             </div>
         </div>
 
         <div class="global-buttons">
-            <button class="action-btn" id="resetMatchBtn">🔄 REINICIAR PARTIDO</button>
-            <button class="action-btn" id="finishMatchBtn">🎯 FINALIZAR PARTIDO</button>
+            <button class="action-btn" id="resetMatchBtn">🔄 REINICIAR</button>
+            <button class="action-btn" id="finishMatchBtn">🎯 FINALIZAR</button>
         </div>
         <div id="winnerMsg" class="winner-msg" style="display: none;"></div>
     </div>
 
     <div class="history-section">
         <div class="history-title">
-            📋 HISTORIAL DE PARTIDOS
-            <button class="clear-history" id="clearHistoryBtn">🗑️ BORRAR TODO</button>
+            📋 HISTORIAL
+            <button class="clear-history" id="clearHistoryBtn">🗑️ BORRAR</button>
         </div>
         <div id="historyList" class="history-list">
             <div style="text-align:center; color:#aaa;">📭 Sin partidos jugados aún</div>
@@ -583,231 +448,205 @@
 </div>
 
 <script>
-    // ==================== CONTROL DE SENSIBILIDAD ====================
-    const sensitivitySlider = document.getElementById('sensitivity');
-    const sensitivityValue = document.getElementById('sensitivityValue');
-    let sensibilidad = 0.6; // valor por defecto
+    // ==================== MODO PRUEBA ====================
+    let testMode = false;
+    const testModeBtn = document.getElementById('testModeBtn');
+    const debugLog = document.getElementById('debugLog');
     
-    sensitivitySlider.addEventListener('input', (e) => {
-        sensibilidad = parseFloat(e.target.value);
-        sensitivityValue.innerText = `${Math.round(sensibilidad * 100)}%`;
+    function agregarLog(mensaje, tipo = 'info') {
+        const logEntry = document.createElement('div');
+        const hora = new Date().toLocaleTimeString();
+        logEntry.innerHTML = `[${hora}] ${mensaje}`;
+        logEntry.style.color = tipo === 'error' ? '#ff8888' : (tipo === 'success' ? '#88ff88' : '#aaffaa');
+        logEntry.style.borderBottom = '1px solid #2a4a3a';
+        logEntry.style.padding = '2px 0';
+        debugLog.prepend(logEntry);
         
-        // Feedback visual
-        const feedback = document.getElementById('voiceFeedback');
-        feedback.innerHTML = `🔊 Sensibilidad al ${Math.round(sensibilidad * 100)}% - ${sensibilidad > 0.7 ? 'Ideal para ambiente ruidoso' : 'Filtro máximo para mucho ruido'}`;
-        setTimeout(() => {
-            if (!listening) feedback.innerHTML = '⚪ Pulsá el micrófono UNA VEZ para activar el modo manos libres';
-        }, 2000);
+        // Mantener solo últimos 20 logs
+        while (debugLog.children.length > 20) {
+            debugLog.removeChild(debugLog.lastChild);
+        }
+        
+        // También en consola para debug
+        console.log(mensaje);
+    }
+    
+    testModeBtn.addEventListener('click', () => {
+        testMode = !testMode;
+        if (testMode) {
+            testModeBtn.innerHTML = '🔧 Modo Prueba (activado)';
+            testModeBtn.style.background = '#ff4444';
+            testModeBtn.style.color = 'white';
+            agregarLog('🔧 MODO PRUEBA ACTIVADO - Se mostrará lo que escucha el micrófono');
+        } else {
+            testModeBtn.innerHTML = '🔧 Modo Prueba (activar)';
+            testModeBtn.style.background = '#d49b3a';
+            testModeBtn.style.color = '#1e3a2a';
+            agregarLog('🔧 Modo prueba desactivado');
+        }
     });
     
     // ==================== WAKE LOCK ====================
     let wakeLock = null;
-    const wakeLockStatus = document.getElementById('wakeLockStatus');
-    
     async function activarWakeLock() {
         if ('wakeLock' in navigator) {
             try {
                 wakeLock = await navigator.wakeLock.request('screen');
-                wakeLockStatus.innerHTML = '🔋 Pantalla activa: ACTIVADA ✅';
-                wakeLockStatus.style.background = '#2b7a3e';
-                wakeLock.addEventListener('release', () => {
-                    wakeLockStatus.innerHTML = '⚠️ Pantalla activa: LIBERADA';
-                    wakeLockStatus.style.background = '#9e3c2c';
-                });
-            } catch (err) {
-                wakeLockStatus.innerHTML = '❌ Pantalla activa: NO SOPORTADA';
-                wakeLockStatus.style.background = '#9e3c2c';
-            }
+                document.getElementById('wakeLockStatus').innerHTML = '🔋 Pantalla activa: ACTIVADA ✅';
+            } catch(err) {}
         }
     }
+    activarWakeLock();
     
-    async function reactivarWakeLock() {
-        if (wakeLock === null) await activarWakeLock();
-    }
-    
-    document.addEventListener('visibilitychange', async () => {
-        if (document.visibilityState === 'visible') await reactivarWakeLock();
-    });
-    
-    // ==================== RECONOCIMIENTO DE VOZ CON FILTRO ====================
+    // ==================== VOZ MEJORADA ====================
     let recognition = null;
     let listening = false;
     let shouldRestart = true;
     let lastCommandTime = 0;
-    const COMMAND_COOLDOWN = 800; // ms entre comandos para evitar dobles
+    const COMMAND_COOLDOWN = 800;
     
     const micBtn = document.getElementById('micBtn');
     const voiceFeedback = document.getElementById('voiceFeedback');
-    const confidenceFill = document.getElementById('confidenceFill');
     const nameAInput = document.getElementById('nameA');
     const nameBInput = document.getElementById('nameB');
     
-    function obtenerNombres() {
-        return {
-            a: nameAInput.value.trim().toLowerCase() || "juan",
-            b: nameBInput.value.trim().toLowerCase() || "pedro"
-        };
-    }
-    
-    // Palabras clave para detección robusta
-    const palabrasClave = {
-        punto: ['punto', 'puntoo', 'puntu', 'punt', 'puntoa', 'puntaje'],
-        ganar: ['gana', 'suma', 'sume', 'anota', 'marca', 'para', 'hazle'],
-        a: ['a', 'a ', 'alfa', 'uno'],
-        b: ['b', 'be', 'beta', 'dos', '2']
-    };
-    
-    function normalizarTexto(texto) {
-        return texto.toLowerCase()
-            .replace(/á/g, 'a')
-            .replace(/é/g, 'e')
-            .replace(/í/g, 'i')
-            .replace(/ó/g, 'o')
-            .replace(/ú/g, 'u')
-            .replace(/ñ/g, 'n');
-    }
-    
-    function detectarComando(transcript, nombres) {
-        const texto = normalizarTexto(transcript);
-        console.log('Texto normalizado:', texto);
+    // Lista de comandos explícitos por equipo
+    function detectarComandoClaro(transcript, nombres) {
+        const texto = transcript.toLowerCase()
+            .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i')
+            .replace(/ó/g, 'o').replace(/ú/g, 'u');
         
-        // Buscar nombre de pareja A
-        const nombreANormalizado = normalizarTexto(nombres.a);
-        const contieneNombreA = texto.includes(nombreANormalizado) || 
-                                 (nombreANormalizado.length > 2 && texto.includes(nombreANormalizado.substring(0, -1)));
+        const nombreA = nombres.a.toLowerCase();
+        const nombreB = nombres.b.toLowerCase();
         
-        // Buscar nombre de pareja B
-        const nombreBNormalizado = normalizarTexto(nombres.b);
-        const contieneNombreB = texto.includes(nombreBNormalizado) ||
-                                 (nombreBNormalizado.length > 2 && texto.includes(nombreBNormalizado.substring(0, -1)));
+        // Palabras clave para cada equipo (MUY CLARAS)
+        const comandosA = [
+            'punto a', 'puntoa', 'a punto', 'gana a', 'suma a', 'anota a',
+            'punto ' + nombreA, nombreA + ' punto', 'gana ' + nombreA, nombreA + ' gana',
+            'a', 'uno', 'equipo a'
+        ];
         
-        // Detectar palabra de acción (punto o ganar)
-        const tieneAccion = palabrasClave.punto.some(p => texto.includes(p)) ||
-                           palabrasClave.ganar.some(p => texto.includes(p));
+        const comandosB = [
+            'punto b', 'puntob', 'b punto', 'gana b', 'suma b', 'anota b',
+            'punto ' + nombreB, nombreB + ' punto', 'gana ' + nombreB, nombreB + ' gana',
+            'b', 'dos', 'equipo b'
+        ];
         
-        // Detección de equipo A
-        const equipoADirecto = contieneNombreA && (tieneAccion || texto.includes('puntoa'));
-        const equipoAAlternativo = (texto.includes('a') || palabrasClave.a.some(p => texto.includes(p))) && 
-                                   (tieneAccion || texto.includes('ganar')) &&
-                                   !contieneNombreB;
+        // Verificar comandos exactos primero
+        for (let cmd of comandosA) {
+            if (texto.includes(cmd)) {
+                agregarLog(`🎯 Detectado: "${cmd}" → Equipo A`, 'success');
+                return 'A';
+            }
+        }
         
-        // Detección de equipo B
-        const equipoBDirecto = contieneNombreB && (tieneAccion || texto.includes('puntob'));
-        const equipoBAlternativo = (texto.includes('b') || palabrasClave.b.some(p => texto.includes(p))) && 
-                                   (tieneAccion || texto.includes('ganar')) &&
-                                   !contieneNombreA;
+        for (let cmd of comandosB) {
+            if (texto.includes(cmd)) {
+                agregarLog(`🎯 Detectado: "${cmd}" → Equipo B`, 'success');
+                return 'B';
+            }
+        }
         
-        // También detectar "partido ganado" o "set ganado"?
-        if (equipoADirecto || equipoAAlternativo) return 'A';
-        if (equipoBDirecto || equipoBAlternativo) return 'B';
+        // Si no, intentar con los nombres solos (pero requiriendo palabra clave)
+        const tieneAccion = texto.includes('punto') || texto.includes('gana') || 
+                           texto.includes('suma') || texto.includes('anota') || 
+                           texto.includes('marca');
         
-        // Fallback: si dijo algo como "para juan" o "juan punto"
-        if (tieneAccion && contieneNombreA) return 'A';
-        if (tieneAccion && contieneNombreB) return 'B';
+        if (tieneAccion) {
+            if (texto.includes(nombreA) && !texto.includes(nombreB)) {
+                agregarLog(`🎯 Detectado: "${nombreA}" + acción → Equipo A`, 'success');
+                return 'A';
+            }
+            if (texto.includes(nombreB) && !texto.includes(nombreA)) {
+                agregarLog(`🎯 Detectado: "${nombreB}" + acción → Equipo B`, 'success');
+                return 'B';
+            }
+        }
         
         return null;
     }
     
-    function actualizarConfianza(nivel) {
-        confidenceFill.style.width = `${nivel * 100}%`;
-    }
-    
     function iniciarReconocimiento() {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            voiceFeedback.innerHTML = '❌ Tu navegador no soporta reconocimiento de voz.';
+        if (!('webkitSpeechRecognition' in window)) {
+            voiceFeedback.innerHTML = '❌ Navegador no compatible';
             return false;
         }
         
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const SpeechRecognition = window.webkitSpeechRecognition;
         const newRecognition = new SpeechRecognition();
         newRecognition.continuous = true;
-        newRecognition.interimResults = true; // Para mejor detección
+        newRecognition.interimResults = true;
         newRecognition.lang = 'es-ES';
-        
-        // Configuración para ambiente ruidoso
-        newRecognition.maxAlternatives = 3; // Múltiples alternativas
         
         newRecognition.onstart = () => {
             listening = true;
             micBtn.classList.add('listening');
-            voiceFeedback.innerHTML = '🎤 Modo antirruido ACTIVADO. Hablá CLARO: "Punto Juan"';
+            voiceFeedback.innerHTML = '🎤 Escuchando... Decí: "Punto A" o "Punto B"';
             voiceFeedback.style.background = '#d49b3aaa';
+            agregarLog('🎤 Micrófono activado - Modo escucha continua');
         };
         
         newRecognition.onend = () => {
             if (shouldRestart && !ganadorPartido) {
                 setTimeout(() => {
                     if (shouldRestart && !ganadorPartido && recognition) {
-                        try { recognition.start(); } catch(e) { console.log('Error reiniciando:', e); }
+                        try { recognition.start(); } catch(e) {}
                     }
                 }, 200);
             } else {
                 listening = false;
                 micBtn.classList.remove('listening');
                 if (!ganadorPartido) {
-                    voiceFeedback.innerHTML = '⚡ Voz desactivada. Pulsa el micrófono para activar.';
+                    voiceFeedback.innerHTML = '⚡ Voz desactivada';
                     voiceFeedback.style.background = '#000000aa';
                 }
-                actualizarConfianza(0);
             }
         };
         
         newRecognition.onresult = (event) => {
             const nombres = obtenerNombres();
-            let mejorCoincidencia = null;
-            let maxConfianza = 0;
             
             for (let i = event.resultIndex; i < event.results.length; i++) {
-                const resultado = event.results[i];
+                const result = event.results[i];
+                const transcript = result[0].transcript;
+                const isFinal = result.isFinal;
                 
-                // Si es un resultado interino, mostrar confianza
-                if (resultado.isFinal === false) {
-                    const confianzaResultado = resultado[0].confidence || 0.5;
-                    actualizarConfianza(confianzaResultado * sensibilidad);
+                if (testMode) {
+                    agregarLog(`🎤 Escuchado: "${transcript}" ${isFinal ? '(final)' : '(provisional)'}`);
                 }
                 
-                for (let j = 0; j < resultado.length; j++) {
-                    const transcript = resultado[j].transcript;
-                    const confidence = (resultado[j].confidence || 0.5) * sensibilidad;
+                if (isFinal) {
+                    const equipo = detectarComandoClaro(transcript, nombres);
                     
-                    const equipo = detectarComando(transcript, nombres);
-                    if (equipo && confidence > maxConfianza) {
-                        maxConfianza = confidence;
-                        mejorCoincidencia = equipo;
+                    if (equipo) {
+                        const ahora = Date.now();
+                        if (ahora - lastCommandTime > COMMAND_COOLDOWN) {
+                            lastCommandTime = ahora;
+                            const nombreEquipo = equipo === 'A' ? nameAInput.value : nameBInput.value;
+                            voiceFeedback.innerHTML = `✅ ¡Punto para ${nombreEquipo}! (${transcript.substring(0, 30)})`;
+                            voiceFeedback.style.background = '#2b7a3eaa';
+                            agregarLog(`✅ EJECUTANDO: Punto para Equipo ${equipo} - "${transcript}"`, 'success');
+                            setTimeout(() => {
+                                if (listening) voiceFeedback.style.background = '#d49b3aaa';
+                            }, 1000);
+                            sumarPunto(equipo);
+                        } else {
+                            agregarLog(`⏱️ Ignorado (cooldown): ${transcript}`);
+                        }
+                    } else if (testMode && transcript.length > 0) {
+                        agregarLog(`❓ No reconocido: "${transcript}" - Decí "Punto A" o "Punto B"`);
                     }
-                }
-            }
-            
-            actualizarConfianza(maxConfianza);
-            
-            // Si hay buena confianza, ejecutar comando
-            if (mejorCoincidencia && maxConfianza > 0.4) {
-                const ahora = Date.now();
-                if (ahora - lastCommandTime > COMMAND_COOLDOWN) {
-                    lastCommandTime = ahora;
-                    
-                    const nombreEquipo = mejorCoincidencia === 'A' ? nameAInput.value.trim() : nameBInput.value.trim();
-                    voiceFeedback.innerHTML = `✅ ¡Punto para ${nombreEquipo}! (${Math.round(maxConfianza * 100)}% confianza)`;
-                    voiceFeedback.style.background = '#2b7a3eaa';
-                    setTimeout(() => { 
-                        if (listening) voiceFeedback.style.background = '#d49b3aaa';
-                    }, 1000);
-                    
-                    sumarPunto(mejorCoincidencia);
                 }
             }
         };
         
         newRecognition.onerror = (event) => {
-            console.error('Error de voz:', event.error);
+            agregarLog(`❌ Error: ${event.error}`, 'error');
             if (event.error === 'not-allowed') {
-                voiceFeedback.innerHTML = '🔴 Permiso denegado. Revisá Configuración → Chrome → Permisos → Micrófono';
-                voiceFeedback.style.background = '#9e3c2caa';
+                voiceFeedback.innerHTML = '🔴 Permiso denegado. Activá el micrófono en Configuración';
                 shouldRestart = false;
                 listening = false;
                 micBtn.classList.remove('listening');
-            } else if (event.error !== 'no-speech') {
-                voiceFeedback.innerHTML = `⚠️ Error: ${event.error}. Reintentando...`;
             }
         };
         
@@ -815,44 +654,51 @@
         return true;
     }
     
+    function obtenerNombres() {
+        return {
+            a: nameAInput.value.trim() || "Juan",
+            b: nameBInput.value.trim() || "Pedro"
+        };
+    }
+    
     async function pedirPermisoYActivar() {
         if (ganadorPartido) {
-            voiceFeedback.innerHTML = '⚠️ El partido ya terminó. Reinicia para seguir jugando.';
+            voiceFeedback.innerHTML = '⚠️ Partido terminado. Reiniciá para seguir.';
             return;
         }
+        
         if (listening) {
             shouldRestart = false;
             if (recognition) recognition.stop();
             listening = false;
             micBtn.classList.remove('listening');
-            voiceFeedback.innerHTML = '⚡ Manos libres DESACTIVADO. Pulsa el micrófono para activar.';
-            voiceFeedback.style.background = '#000000aa';
-            actualizarConfianza(0);
+            voiceFeedback.innerHTML = '⚡ Voz desactivada';
+            agregarLog('🔇 Voz desactivada manualmente');
             return;
         }
-        voiceFeedback.innerHTML = '🎤 Solicitando permiso de micrófono...';
+        
+        voiceFeedback.innerHTML = '🎤 Solicitando permiso...';
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
             if (!recognition) iniciarReconocimiento();
             shouldRestart = true;
             recognition.start();
-            await activarWakeLock();
+            agregarLog('🎤 Voz activada - Escuchando comandos');
         } catch (err) {
-            voiceFeedback.innerHTML = '🔴 Permiso denegado. Activá el micrófono en Configuración → Chrome → Permisos';
-            voiceFeedback.style.background = '#9e3c2caa';
+            voiceFeedback.innerHTML = '🔴 Permiso denegado';
+            agregarLog('🔴 ERROR: No se pudo acceder al micrófono', 'error');
         }
     }
     
     micBtn.addEventListener('click', pedirPermisoYActivar);
     
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        voiceFeedback.innerHTML = '❌ Tu navegador no soporta reconocimiento de voz. Usá los botones táctiles.';
+    if (!('webkitSpeechRecognition' in window)) {
+        voiceFeedback.innerHTML = '❌ Chrome no soporta voz. Usá los botones.';
         micBtn.disabled = true;
-        micBtn.style.opacity = '0.5';
     }
     
-    // ==================== LÓGICA DEL MARCADOR (igual que antes) ====================
+    // ==================== LÓGICA DEL MARCADOR ====================
     let modoTiebreak = false;
     let puntosTiebreakA = 0, puntosTiebreakB = 0;
     
@@ -879,10 +725,10 @@
     
     let historialPartidos = [];
     
-    function actualizarTiebreakUI() {
+    function actualizarUI() {
         if (modoTiebreak) {
-            setStatusTitle.innerHTML = "🎾 TIE-BREAK (7 puntos, diferencia 2)";
-            tiebreakIndicator.innerHTML = '<span class="tiebreak-indicator">⚡ MODO TIE-BREAK ⚡</span>';
+            setStatusTitle.innerHTML = "🎾 TIE-BREAK";
+            tiebreakIndicator.innerHTML = '⚡ MODO TIE-BREAK ⚡';
             pointsASpan.innerText = puntosTiebreakA;
             pointsBSpan.innerText = puntosTiebreakB;
         } else {
@@ -896,17 +742,33 @@
         set1Span.innerText = setsCompletados[0] || "-";
         set2Span.innerText = setsCompletados[1] || "-";
         set3Span.innerText = setsCompletados[2] || "-";
-        document.querySelectorAll('.set-result').forEach((el, i) => {
-            if (setsCompletados[i]) el.classList.remove('empty');
-            else el.classList.add('empty');
-        });
     }
     
-    function activarTiebreak() {
-        modoTiebreak = true;
-        puntosTiebreakA = 0;
-        puntosTiebreakB = 0;
-        actualizarTiebreakUI();
+    function ganarJuego(equipo) {
+        if (ganadorPartido) return;
+        if (equipo === 'A') juegosA++;
+        else juegosB++;
+        puntosA = 0; puntosB = 0;
+        actualizarUI();
+        
+        // Verificar set
+        if (!modoTiebreak) {
+            if (juegosA >= 6 && (juegosA - juegosB) >= 2) {
+                setsCompletados.push(`${juegosA}-${juegosB}`);
+                juegosA = 0; juegosB = 0;
+                actualizarUI();
+                const setsA = setsCompletados.filter(s => parseInt(s.split('-')[0]) > parseInt(s.split('-')[1])).length;
+                const setsB = setsCompletados.filter(s => parseInt(s.split('-')[1]) > parseInt(s.split('-')[0])).length;
+                if (setsA >= 2) finalizarPartido('A');
+                else if (setsB >= 2) finalizarPartido('B');
+            }
+            else if (juegosA === 6 && juegosB === 6) {
+                modoTiebreak = true;
+                puntosTiebreakA = 0;
+                puntosTiebreakB = 0;
+                actualizarUI();
+            }
+        }
     }
     
     function ganarTiebreak(equipo) {
@@ -916,59 +778,44 @@
         setsCompletados.push(`${juegosA}-${juegosB}`);
         juegosA = 0; juegosB = 0;
         modoTiebreak = false;
-        puntosTiebreakA = 0; puntosTiebreakB = 0;
         puntosA = 0; puntosB = 0;
-        actualizarTiebreakUI();
-        const setsA = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return a > b; }).length;
-        const setsB = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return b > a; }).length;
+        actualizarUI();
+        const setsA = setsCompletados.filter(s => parseInt(s.split('-')[0]) > parseInt(s.split('-')[1])).length;
+        const setsB = setsCompletados.filter(s => parseInt(s.split('-')[1]) > parseInt(s.split('-')[0])).length;
         if (setsA >= 2) finalizarPartido('A');
         else if (setsB >= 2) finalizarPartido('B');
     }
     
-    function ganarJuego(equipo) {
-        if (ganadorPartido) return;
-        if (equipo === 'A') juegosA++;
-        else juegosB++;
-        puntosA = 0; puntosB = 0;
-        actualizarTiebreakUI();
-        comprobarSet();
-    }
-    
-    function comprobarSet() {
-        if (modoTiebreak) return;
-        let setGanado = null;
-        if (juegosA >= 6 && (juegosA - juegosB) >= 2) setGanado = 'A';
-        else if (juegosB >= 6 && (juegosB - juegosA) >= 2) setGanado = 'B';
-        else if (juegosA === 7 && juegosB <= 5) setGanado = 'A';
-        else if (juegosB === 7 && juegosA <= 5) setGanado = 'B';
-        if (juegosA === 6 && juegosB === 6) { activarTiebreak(); return; }
-        if (setGanado) {
-            setsCompletados.push(`${juegosA}-${juegosB}`);
-            juegosA = 0; juegosB = 0;
-            actualizarTiebreakUI();
-            const setsA = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return a > b; }).length;
-            const setsB = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return b > a; }).length;
-            if (setsA >= 2) finalizarPartido('A');
-            else if (setsB >= 2) finalizarPartido('B');
-        }
-    }
-    
     function sumarPunto(equipo) {
         if (ganadorPartido) return;
+        
         if (modoTiebreak) {
             if (equipo === 'A') puntosTiebreakA++;
             else puntosTiebreakB++;
-            actualizarTiebreakUI();
+            actualizarUI();
             if (puntosTiebreakA >= 7 && (puntosTiebreakA - puntosTiebreakB) >= 2) ganarTiebreak('A');
             else if (puntosTiebreakB >= 7 && (puntosTiebreakB - puntosTiebreakA) >= 2) ganarTiebreak('B');
             return;
         }
-        if (puntosA === 3 && puntosB === 3) { ganarJuego(equipo); return; }
-        if (equipo === 'A' && puntosA === 3 && puntosB < 3) { ganarJuego('A'); return; }
-        if (equipo === 'B' && puntosB === 3 && puntosA < 3) { ganarJuego('B'); return; }
+        
+        // Punto de oro
+        if (puntosA === 3 && puntosB === 3) {
+            ganarJuego(equipo);
+            return;
+        }
+        
+        if (equipo === 'A' && puntosA === 3 && puntosB < 3) {
+            ganarJuego('A');
+            return;
+        }
+        if (equipo === 'B' && puntosB === 3 && puntosA < 3) {
+            ganarJuego('B');
+            return;
+        }
+        
         if (equipo === 'A') { if (puntosA < 3) puntosA++; }
         else { if (puntosB < 3) puntosB++; }
-        actualizarTiebreakUI();
+        actualizarUI();
     }
     
     function restarPunto(equipo) {
@@ -976,13 +823,13 @@
         if (modoTiebreak) {
             if (equipo === 'A' && puntosTiebreakA > 0) puntosTiebreakA--;
             else if (equipo === 'B' && puntosTiebreakB > 0) puntosTiebreakB--;
-            actualizarTiebreakUI();
+            actualizarUI();
             return;
         }
         if (puntosA === 3 && puntosB === 3) return;
         if (equipo === 'A' && puntosA > 0) puntosA--;
         else if (equipo === 'B' && puntosB > 0) puntosB--;
-        actualizarTiebreakUI();
+        actualizarUI();
     }
     
     function finalizarPartido(ganadorCod) {
@@ -990,30 +837,47 @@
         ganadorPartido = ganadorCod;
         shouldRestart = false;
         if (recognition) recognition.stop();
+        
         const nombreA = nameAInput.value.trim() || "Pareja A";
         const nombreB = nameBInput.value.trim() || "Pareja B";
         const ganadorNombre = ganadorCod === 'A' ? nombreA : nombreB;
-        const setsA = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return a > b; }).length;
-        const setsB = setsCompletados.filter(s => { let [a,b] = s.split('-').map(Number); return b > a; }).length;
-        historialPartidos.unshift({ fecha: new Date().toLocaleString(), equipoA: nombreA, equipoB: nombreB, setsAGanados: setsA, setsBGanados: setsB, setsDetalle: [...setsCompletados], ganador: ganadorNombre });
+        const setsA = setsCompletados.filter(s => parseInt(s.split('-')[0]) > parseInt(s.split('-')[1])).length;
+        const setsB = setsCompletados.filter(s => parseInt(s.split('-')[1]) > parseInt(s.split('-')[0])).length;
+        
+        historialPartidos.unshift({
+            fecha: new Date().toLocaleString(),
+            equipoA: nombreA,
+            equipoB: nombreB,
+            setsAGanados: setsA,
+            setsBGanados: setsB,
+            setsDetalle: [...setsCompletados],
+            ganador: ganadorNombre
+        });
         guardarHistorial();
+        
         winnerMsgDiv.style.display = "block";
-        winnerMsgDiv.innerText = `🏆 ¡${ganadorNombre} GANA EL PARTIDO! (${setsA} - ${setsB} en sets) 🏆`;
+        winnerMsgDiv.innerText = `🏆 ¡${ganadorNombre} GANA! (${setsA}-${setsB}) 🏆`;
+        
         document.getElementById('addA').disabled = true;
         document.getElementById('addB').disabled = true;
         document.getElementById('subA').disabled = true;
         document.getElementById('subB').disabled = true;
+        agregarLog(`🏆 Partido finalizado. Ganador: ${ganadorNombre}`);
     }
     
     function reiniciarPartido() {
-        puntosA = 0; puntosB = 0; juegosA = 0; juegosB = 0; setsCompletados = []; ganadorPartido = null;
-        modoTiebreak = false; puntosTiebreakA = 0; puntosTiebreakB = 0;
-        actualizarTiebreakUI();
+        puntosA = 0; puntosB = 0; juegosA = 0; juegosB = 0;
+        setsCompletados = []; ganadorPartido = null;
+        modoTiebreak = false;
+        puntosTiebreakA = 0; puntosTiebreakB = 0;
+        actualizarUI();
         winnerMsgDiv.style.display = "none";
         document.getElementById('addA').disabled = false;
         document.getElementById('addB').disabled = false;
         document.getElementById('subA').disabled = false;
         document.getElementById('subB').disabled = false;
+        agregarLog('🔄 Partido reiniciado');
+        
         if (listening) {
             shouldRestart = false;
             if (recognition) recognition.stop();
@@ -1021,18 +885,28 @@
                 if (!ganadorPartido) { shouldRestart = true; recognition.start(); }
             }, 300);
         }
-        reactivarWakeLock();
     }
     
-    function guardarHistorial() { localStorage.setItem('padel_historial_antirruido', JSON.stringify(historialPartidos)); renderizarHistorial(); }
-    function cargarHistorial() { const guardado = localStorage.getItem('padel_historial_antirruido'); historialPartidos = guardado ? JSON.parse(guardado) : []; renderizarHistorial(); }
+    function guardarHistorial() {
+        localStorage.setItem('padel_historial_corregido', JSON.stringify(historialPartidos));
+        renderizarHistorial();
+    }
+    
+    function cargarHistorial() {
+        const guardado = localStorage.getItem('padel_historial_corregido');
+        historialPartidos = guardado ? JSON.parse(guardado) : [];
+        renderizarHistorial();
+    }
+    
     function renderizarHistorial() {
         const historyDiv = document.getElementById('historyList');
-        if (!historialPartidos.length) { historyDiv.innerHTML = '<div style="text-align:center; color:#aaa;">📭 Sin partidos jugados aún</div>'; return; }
+        if (!historialPartidos.length) {
+            historyDiv.innerHTML = '<div style="text-align:center; color:#aaa;">📭 Sin partidos</div>';
+            return;
+        }
         let html = '';
         for (let p of historialPartidos) {
-            let setsTexto = p.setsDetalle.map((s, i) => `S${i+1}: ${s}`).join('  ');
-            html += `<div class="history-item"><strong>${p.fecha}</strong><br>🎾 ${p.equipoA} vs ${p.equipoB}<br>📊 Sets: ${p.setsAGanados} - ${p.setsBGanados} (${setsTexto})<br>🏆 <strong>Ganador: ${p.ganador}</strong></div>`;
+            html += `<div class="history-item"><strong>${p.fecha}</strong><br>🎾 ${p.equipoA} vs ${p.equipoB}<br>📊 Sets: ${p.setsAGanados}-${p.setsBGanados} (${p.setsDetalle.join(', ')})<br>🏆 Ganador: ${p.ganador}</div>`;
         }
         historyDiv.innerHTML = html;
     }
@@ -1042,12 +916,15 @@
     document.getElementById('subA').addEventListener('click', () => restarPunto('A'));
     document.getElementById('subB').addEventListener('click', () => restarPunto('B'));
     document.getElementById('resetMatchBtn').addEventListener('click', reiniciarPartido);
-    document.getElementById('finishMatchBtn').addEventListener('click', () => { if (!ganadorPartido) alert("El partido aún no ha terminado. Espera a que alguien gane 2 sets."); });
-    document.getElementById('clearHistoryBtn').addEventListener('click', () => { if (confirm("¿Borrar todo el historial?")) { historialPartidos = []; guardarHistorial(); } });
+    document.getElementById('finishMatchBtn').addEventListener('click', () => {
+        if (!ganadorPartido) alert("El partido aún no terminó");
+    });
+    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+        if (confirm("¿Borrar historial?")) { historialPartidos = []; guardarHistorial(); }
+    });
     
     cargarHistorial();
     reiniciarPartido();
-    activarWakeLock();
 </script>
 </body>
 </html>
