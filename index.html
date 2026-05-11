@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Marcador de Pádel</title>
+    <title>Marcador de Pádel - Voz con Filtro Anti-Ruido</title>
     
     <!-- PWA Configuration -->
     <link rel="manifest" href="manifest.json">
@@ -18,7 +18,6 @@
     <meta name="mobile-web-app-capable" content="yes">
     
     <style>
-        /* ===== ESTILOS COMPLETOS DEL MARCADOR ===== */
         * {
             box-sizing: border-box;
             user-select: none;
@@ -225,6 +224,21 @@
             color: #FFE6B0;
         }
 
+        .confidence-bar {
+            height: 4px;
+            background: #2a4a3a;
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            width: 0%;
+            background: #FFD966;
+            transition: width 0.3s;
+        }
+
         .games-container {
             background: #1e2a25c9;
             border-radius: 40px;
@@ -426,6 +440,20 @@
             border-radius: 30px;
         }
 
+        /* Barra de sensibilidad */
+        .sensitivity-control {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 0.75rem;
+        }
+        
+        .sensitivity-control input {
+            width: 100px;
+        }
+
         @media (max-width: 550px) {
             .team-points { font-size: 2.5rem; min-width: 100px; padding: 5px 15px; }
             button { width: 55px; font-size: 1.5rem; }
@@ -446,7 +474,7 @@
 <div class="container">
     <div class="scoreboard">
         <div class="install-banner">
-            🎾 MARCADOR DE PÁDEL PROFESIONAL 🎾
+            🎾 MARCADOR DE PÁDEL - MODO ANTIRRUIDO 🎾
         </div>
 
         <div class="screen-wake" id="wakeLockStatus">🔋 Pantalla activa: ACTIVADA</div>
@@ -466,12 +494,22 @@
             <div class="voice-status">
                 <button class="mic-button" id="micBtn">🎤</button>
                 <div class="voice-commands">
-                    🗣️ MODO MANOS LIBRES<br>
-                    Decí: <strong>"Punto Juan"</strong> o <strong>"Punto Pedro"</strong>
+                    🗣️ MODO ANTIRRUIDO<br>
+                    Decí: <strong>"Punto Juan"</strong> o <strong>"Punto Pedro"</strong><br>
+                    <span style="font-size:0.7rem;">(también: "Gana Juan", "Suma Pedro", "Punto para A", etc.)</span>
                 </div>
             </div>
             <div id="voiceFeedback" class="voice-feedback">
                 ⚪ Pulsá el micrófono UNA VEZ para activar el modo manos libres
+            </div>
+            <div class="confidence-bar">
+                <div class="confidence-fill" id="confidenceFill"></div>
+            </div>
+            <div class="sensitivity-control">
+                <span>🔊 Sensibilidad:</span>
+                <input type="range" id="sensitivity" min="0.3" max="1" step="0.05" value="0.6">
+                <span id="sensitivityValue">60%</span>
+                <span style="font-size:0.65rem;">(menos = más filtro)</span>
             </div>
         </div>
 
@@ -545,6 +583,23 @@
 </div>
 
 <script>
+    // ==================== CONTROL DE SENSIBILIDAD ====================
+    const sensitivitySlider = document.getElementById('sensitivity');
+    const sensitivityValue = document.getElementById('sensitivityValue');
+    let sensibilidad = 0.6; // valor por defecto
+    
+    sensitivitySlider.addEventListener('input', (e) => {
+        sensibilidad = parseFloat(e.target.value);
+        sensitivityValue.innerText = `${Math.round(sensibilidad * 100)}%`;
+        
+        // Feedback visual
+        const feedback = document.getElementById('voiceFeedback');
+        feedback.innerHTML = `🔊 Sensibilidad al ${Math.round(sensibilidad * 100)}% - ${sensibilidad > 0.7 ? 'Ideal para ambiente ruidoso' : 'Filtro máximo para mucho ruido'}`;
+        setTimeout(() => {
+            if (!listening) feedback.innerHTML = '⚪ Pulsá el micrófono UNA VEZ para activar el modo manos libres';
+        }, 2000);
+    });
+    
     // ==================== WAKE LOCK ====================
     let wakeLock = null;
     const wakeLockStatus = document.getElementById('wakeLockStatus');
@@ -574,12 +629,16 @@
         if (document.visibilityState === 'visible') await reactivarWakeLock();
     });
     
-    // ==================== RECONOCIMIENTO DE VOZ ====================
+    // ==================== RECONOCIMIENTO DE VOZ CON FILTRO ====================
     let recognition = null;
     let listening = false;
     let shouldRestart = true;
+    let lastCommandTime = 0;
+    const COMMAND_COOLDOWN = 800; // ms entre comandos para evitar dobles
+    
     const micBtn = document.getElementById('micBtn');
     const voiceFeedback = document.getElementById('voiceFeedback');
+    const confidenceFill = document.getElementById('confidenceFill');
     const nameAInput = document.getElementById('nameA');
     const nameBInput = document.getElementById('nameB');
     
@@ -588,6 +647,69 @@
             a: nameAInput.value.trim().toLowerCase() || "juan",
             b: nameBInput.value.trim().toLowerCase() || "pedro"
         };
+    }
+    
+    // Palabras clave para detección robusta
+    const palabrasClave = {
+        punto: ['punto', 'puntoo', 'puntu', 'punt', 'puntoa', 'puntaje'],
+        ganar: ['gana', 'suma', 'sume', 'anota', 'marca', 'para', 'hazle'],
+        a: ['a', 'a ', 'alfa', 'uno'],
+        b: ['b', 'be', 'beta', 'dos', '2']
+    };
+    
+    function normalizarTexto(texto) {
+        return texto.toLowerCase()
+            .replace(/á/g, 'a')
+            .replace(/é/g, 'e')
+            .replace(/í/g, 'i')
+            .replace(/ó/g, 'o')
+            .replace(/ú/g, 'u')
+            .replace(/ñ/g, 'n');
+    }
+    
+    function detectarComando(transcript, nombres) {
+        const texto = normalizarTexto(transcript);
+        console.log('Texto normalizado:', texto);
+        
+        // Buscar nombre de pareja A
+        const nombreANormalizado = normalizarTexto(nombres.a);
+        const contieneNombreA = texto.includes(nombreANormalizado) || 
+                                 (nombreANormalizado.length > 2 && texto.includes(nombreANormalizado.substring(0, -1)));
+        
+        // Buscar nombre de pareja B
+        const nombreBNormalizado = normalizarTexto(nombres.b);
+        const contieneNombreB = texto.includes(nombreBNormalizado) ||
+                                 (nombreBNormalizado.length > 2 && texto.includes(nombreBNormalizado.substring(0, -1)));
+        
+        // Detectar palabra de acción (punto o ganar)
+        const tieneAccion = palabrasClave.punto.some(p => texto.includes(p)) ||
+                           palabrasClave.ganar.some(p => texto.includes(p));
+        
+        // Detección de equipo A
+        const equipoADirecto = contieneNombreA && (tieneAccion || texto.includes('puntoa'));
+        const equipoAAlternativo = (texto.includes('a') || palabrasClave.a.some(p => texto.includes(p))) && 
+                                   (tieneAccion || texto.includes('ganar')) &&
+                                   !contieneNombreB;
+        
+        // Detección de equipo B
+        const equipoBDirecto = contieneNombreB && (tieneAccion || texto.includes('puntob'));
+        const equipoBAlternativo = (texto.includes('b') || palabrasClave.b.some(p => texto.includes(p))) && 
+                                   (tieneAccion || texto.includes('ganar')) &&
+                                   !contieneNombreA;
+        
+        // También detectar "partido ganado" o "set ganado"?
+        if (equipoADirecto || equipoAAlternativo) return 'A';
+        if (equipoBDirecto || equipoBAlternativo) return 'B';
+        
+        // Fallback: si dijo algo como "para juan" o "juan punto"
+        if (tieneAccion && contieneNombreA) return 'A';
+        if (tieneAccion && contieneNombreB) return 'B';
+        
+        return null;
+    }
+    
+    function actualizarConfianza(nivel) {
+        confidenceFill.style.width = `${nivel * 100}%`;
     }
     
     function iniciarReconocimiento() {
@@ -599,13 +721,16 @@
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const newRecognition = new SpeechRecognition();
         newRecognition.continuous = true;
-        newRecognition.interimResults = false;
+        newRecognition.interimResults = true; // Para mejor detección
         newRecognition.lang = 'es-ES';
+        
+        // Configuración para ambiente ruidoso
+        newRecognition.maxAlternatives = 3; // Múltiples alternativas
         
         newRecognition.onstart = () => {
             listening = true;
             micBtn.classList.add('listening');
-            voiceFeedback.innerHTML = '🎤 Modo manos libres ACTIVADO. Decí "Punto + nombre"';
+            voiceFeedback.innerHTML = '🎤 Modo antirruido ACTIVADO. Hablá CLARO: "Punto Juan"';
             voiceFeedback.style.background = '#d49b3aaa';
         };
         
@@ -613,9 +738,9 @@
             if (shouldRestart && !ganadorPartido) {
                 setTimeout(() => {
                     if (shouldRestart && !ganadorPartido && recognition) {
-                        try { recognition.start(); } catch(e) {}
+                        try { recognition.start(); } catch(e) { console.log('Error reiniciando:', e); }
                     }
-                }, 100);
+                }, 200);
             } else {
                 listening = false;
                 micBtn.classList.remove('listening');
@@ -623,35 +748,66 @@
                     voiceFeedback.innerHTML = '⚡ Voz desactivada. Pulsa el micrófono para activar.';
                     voiceFeedback.style.background = '#000000aa';
                 }
+                actualizarConfianza(0);
             }
         };
         
         newRecognition.onresult = (event) => {
             const nombres = obtenerNombres();
+            let mejorCoincidencia = null;
+            let maxConfianza = 0;
+            
             for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcript = event.results[i][0].transcript.toLowerCase();
-                if (transcript.includes('punto') && transcript.includes(nombres.a)) {
-                    voiceFeedback.innerHTML = `✅ ¡Punto para ${nameAInput.value.trim()}!`;
-                    voiceFeedback.style.background = '#2b7a3eaa';
-                    setTimeout(() => { if (listening) voiceFeedback.style.background = '#d49b3aaa'; }, 800);
-                    sumarPunto('A');
+                const resultado = event.results[i];
+                
+                // Si es un resultado interino, mostrar confianza
+                if (resultado.isFinal === false) {
+                    const confianzaResultado = resultado[0].confidence || 0.5;
+                    actualizarConfianza(confianzaResultado * sensibilidad);
                 }
-                else if (transcript.includes('punto') && transcript.includes(nombres.b)) {
-                    voiceFeedback.innerHTML = `✅ ¡Punto para ${nameBInput.value.trim()}!`;
+                
+                for (let j = 0; j < resultado.length; j++) {
+                    const transcript = resultado[j].transcript;
+                    const confidence = (resultado[j].confidence || 0.5) * sensibilidad;
+                    
+                    const equipo = detectarComando(transcript, nombres);
+                    if (equipo && confidence > maxConfianza) {
+                        maxConfianza = confidence;
+                        mejorCoincidencia = equipo;
+                    }
+                }
+            }
+            
+            actualizarConfianza(maxConfianza);
+            
+            // Si hay buena confianza, ejecutar comando
+            if (mejorCoincidencia && maxConfianza > 0.4) {
+                const ahora = Date.now();
+                if (ahora - lastCommandTime > COMMAND_COOLDOWN) {
+                    lastCommandTime = ahora;
+                    
+                    const nombreEquipo = mejorCoincidencia === 'A' ? nameAInput.value.trim() : nameBInput.value.trim();
+                    voiceFeedback.innerHTML = `✅ ¡Punto para ${nombreEquipo}! (${Math.round(maxConfianza * 100)}% confianza)`;
                     voiceFeedback.style.background = '#2b7a3eaa';
-                    setTimeout(() => { if (listening) voiceFeedback.style.background = '#d49b3aaa'; }, 800);
-                    sumarPunto('B');
+                    setTimeout(() => { 
+                        if (listening) voiceFeedback.style.background = '#d49b3aaa';
+                    }, 1000);
+                    
+                    sumarPunto(mejorCoincidencia);
                 }
             }
         };
         
         newRecognition.onerror = (event) => {
+            console.error('Error de voz:', event.error);
             if (event.error === 'not-allowed') {
                 voiceFeedback.innerHTML = '🔴 Permiso denegado. Revisá Configuración → Chrome → Permisos → Micrófono';
                 voiceFeedback.style.background = '#9e3c2caa';
                 shouldRestart = false;
                 listening = false;
                 micBtn.classList.remove('listening');
+            } else if (event.error !== 'no-speech') {
+                voiceFeedback.innerHTML = `⚠️ Error: ${event.error}. Reintentando...`;
             }
         };
         
@@ -671,6 +827,7 @@
             micBtn.classList.remove('listening');
             voiceFeedback.innerHTML = '⚡ Manos libres DESACTIVADO. Pulsa el micrófono para activar.';
             voiceFeedback.style.background = '#000000aa';
+            actualizarConfianza(0);
             return;
         }
         voiceFeedback.innerHTML = '🎤 Solicitando permiso de micrófono...';
@@ -695,7 +852,7 @@
         micBtn.style.opacity = '0.5';
     }
     
-    // ==================== LÓGICA DEL MARCADOR ====================
+    // ==================== LÓGICA DEL MARCADOR (igual que antes) ====================
     let modoTiebreak = false;
     let puntosTiebreakA = 0, puntosTiebreakB = 0;
     
@@ -867,8 +1024,8 @@
         reactivarWakeLock();
     }
     
-    function guardarHistorial() { localStorage.setItem('padel_historial_final', JSON.stringify(historialPartidos)); renderizarHistorial(); }
-    function cargarHistorial() { const guardado = localStorage.getItem('padel_historial_final'); historialPartidos = guardado ? JSON.parse(guardado) : []; renderizarHistorial(); }
+    function guardarHistorial() { localStorage.setItem('padel_historial_antirruido', JSON.stringify(historialPartidos)); renderizarHistorial(); }
+    function cargarHistorial() { const guardado = localStorage.getItem('padel_historial_antirruido'); historialPartidos = guardado ? JSON.parse(guardado) : []; renderizarHistorial(); }
     function renderizarHistorial() {
         const historyDiv = document.getElementById('historyList');
         if (!historialPartidos.length) { historyDiv.innerHTML = '<div style="text-align:center; color:#aaa;">📭 Sin partidos jugados aún</div>'; return; }
