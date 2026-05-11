@@ -5,15 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Marcador de Pádel</title>
     
-    <!-- Para que sea instalable como app -->
-    <link rel="manifest" href="manifest.json">
+    <!-- Esto es suficiente para que Chrome ofrezca instalar -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Marcador Pádel">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1a472a">
     
     <style>
-        /* (TODO EL CSS DE LAS VERSIONES ANTERIORES - MISMO ESTILO) */
+        /* (todo el CSS de la versión anterior - mismo estilo) */
         * {
             box-sizing: border-box;
             user-select: none;
@@ -353,18 +351,6 @@
             color: white;
         }
 
-        .install-banner {
-            background: #d49b3a;
-            color: #1e3a2a;
-            border-radius: 40px;
-            padding: 10px;
-            margin-bottom: 15px;
-            text-align: center;
-            font-weight: bold;
-            cursor: pointer;
-            display: none;
-        }
-
         .history-section {
             background: rgba(0, 0, 0, 0.7);
             border-radius: 40px;
@@ -422,6 +408,17 @@
             border-radius: 30px;
         }
 
+        .install-instruction {
+            background: #d49b3a;
+            color: #1e3a2a;
+            border-radius: 40px;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
         @media (max-width: 550px) {
             .team-points { font-size: 2.5rem; min-width: 100px; padding: 5px 15px; }
             button { width: 55px; font-size: 1.5rem; }
@@ -441,8 +438,8 @@
 <body>
 <div class="container">
     <div class="scoreboard">
-        <div id="installBanner" class="install-banner">
-            📱 INSTALAR APP → Toca aquí para instalar en tu celular
+        <div class="install-instruction">
+            📱 Para instalar la app: ⋮ (tres puntos) → Instalar aplicación
         </div>
 
         <div class="screen-wake" id="wakeLockStatus">🔋 Pantalla activa: ACTIVADA</div>
@@ -463,8 +460,7 @@
                 <button class="mic-button" id="micBtn">🎤</button>
                 <div class="voice-commands">
                     🗣️ MODO MANOS LIBRES<br>
-                    Decí: <strong>"Punto Juan"</strong> o <strong>"Punto Pedro"</strong><br>
-                    (o el nombre que pusiste arriba)
+                    Decí: <strong>"Punto Juan"</strong> o <strong>"Punto Pedro"</strong>
                 </div>
             </div>
             <div id="voiceFeedback" class="voice-feedback">
@@ -542,27 +538,6 @@
 </div>
 
 <script>
-    // ==================== INSTALACIÓN PWA ====================
-    let deferredPrompt;
-    const installBanner = document.getElementById('installBanner');
-    
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        installBanner.style.display = 'block';
-        
-        installBanner.addEventListener('click', () => {
-            installBanner.style.display = 'none';
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('App instalada');
-                }
-                deferredPrompt = null;
-            });
-        });
-    });
-    
     // ==================== WAKE LOCK (pantalla activa) ====================
     let wakeLock = null;
     const wakeLockStatus = document.getElementById('wakeLockStatus');
